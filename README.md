@@ -1,146 +1,162 @@
-# DeviceBatteryTray
+<div align="center">
 
-在 Windows 任务栏上显示无线外设电量，**不需要安装各家的驱动软件**。
+<img src="docs/images/logo.png" width="96" alt="设备电量">
 
-```
-⌨ ▭ 73%    🎮 ▭ 66%
-🖱 ▭ 92%    🎮 ▭ 100%
-```
+# 设备电量
 
-协议全部来自对官方驱动的分析（解包 Electron / 反编译 .NET / 驱动日志 / SDK 调用截获），并在实机上验证过。
+在 Windows 任务栏上直接显示无线键盘、鼠标、手柄的电量<br>
+不用安装、也不用打开各家的驱动软件
+
+[![最新版本](https://img.shields.io/github/v/release/AnLifeX/DeviceBatteryTray?label=%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC&color=2DD4BF)](https://github.com/AnLifeX/DeviceBatteryTray/releases/latest)
+[![下载次数](https://img.shields.io/github/downloads/AnLifeX/DeviceBatteryTray/total?label=%E4%B8%8B%E8%BD%BD&color=0EA5E9)](https://github.com/AnLifeX/DeviceBatteryTray/releases)
+[![Windows 10](https://img.shields.io/badge/Windows-10-0078D4?logo=windows&logoColor=white)](#系统要求)
+[![.NET 8](https://img.shields.io/badge/.NET-8-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/download/dotnet/8.0)
+
+[下载](#下载安装) · [支持的设备](#支持的设备) · [使用说明](#使用说明) · [常见问题](#常见问题)
+
+<br>
+
+<img src="docs/images/taskbar.png" width="384" alt="任务栏电量条">
+
+</div>
+
+## 功能
+
+- 🔋 **任务栏电量条**：每台在线设备显示「图标 + 电池 + 百分比」；电量偏低变黄、过低变红，充电时变绿并显示闪电。
+- 🪟 **弹出面板**：点一下电量条，就能看到所有设备的电量和充电状态。
+- 🔔 **低电量提醒**：电量低于设定值时弹出系统通知，同一次低电量只提醒一次。
+- 🎛️ **同型号多台**：插了好几个同型号的接收器也能分别显示；可以给每台设备改名，也可以隐藏不想看的设备。
+- 🌗 **深浅色**：跟随系统，也可以在主页面一键切换。
+- ⬆️ **自动更新**：在后台检查并下载新版本，替换后自动重启。
+
+<div align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/flyout-dark.png">
+  <img src="docs/images/flyout-light.png" width="300" alt="弹出面板">
+</picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/main-dark.png">
+  <img src="docs/images/main-light.png" width="500" alt="主页面">
+</picture>
+</div>
 
 ## 支持的设备
 
-| 品牌 | 支持的设备 | 说明 |
+| 品牌 | 设备 | 说明 |
 |---|---|---|
 | **VGN** | V98Pro V2 键盘 | 2.4G 接收器 |
 | **雷神** | ML903 mini 鼠标 | 星闪接收器、有线 |
 | **盖世小鸡** | 2.4G 接收器手柄 | |
-| **飞智** | 黑武士 3 Pro 手柄 | 电量为估算；需安装飞智空间站，读取需要管理员权限 |
+| **飞智** | 黑武士 3 Pro 手柄 | 电量为估算值；需要安装飞智空间站，并以管理员权限运行 |
 
-使用同款接收器的其他型号大概率也能用（未实测），例如 ATK V HUB 里接收器同为 `320F:5088` 的
-VGN / VXE / ATK 键盘（VGN S99、VXE75、N75 PRO、VXE V87、KAFKA 系列等），以及盖世小鸡 T3 Pro、T4N Pro 等手柄。
+使用同款接收器的其他型号大概率也能用（未实测），例如：
+- VGN / VXE / ATK 的 2.4G 键盘（VGN S99、VXE75、N75 PRO、VXE V87、KAFKA 系列等）
+- 盖世小鸡 T3 Pro、T4N Pro 等手柄
 
-## 协议摘要
+## 下载安装
 
-详细笔记见 [docs/protocols/](docs/protocols/)。
+到 [Releases](https://github.com/AnLifeX/DeviceBatteryTray/releases/latest) 下载：
 
-### VGN 键盘 —— [vgn-v98pro-v2.md](docs/protocols/vgn-v98pro-v2.md)
-- 接收器 `320F:5088`；接口：UsagePage `0xFF1C` / Usage `0x92`，Report ID `0x04`，64 字节
-- 请求：`04 <seq_lo> <seq_hi> 1A 00…`（`0x1A` = power_info）
-- 应答：`04 <seq> 1A 00 00 00 00 <电量%> <充电>`；命令字为 `FF` 表示键盘休眠
-- 来源：ATK V HUB（Electron）`EvisionApi.getPowerInfo`
+| 版本 | 文件 | 说明 |
+|---|---|---|
+| **安装版**（推荐） | `DeviceBatteryTray-win-Setup.exe` | 双击安装，不需要管理员权限；缺少 .NET 8 运行时会自动安装；创建桌面和开始菜单快捷方式 |
+| 便携版 | `DeviceBatteryTray-win-Portable.zip` | 解压到任意目录后运行 `设备电量.exe`；需要先安装 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0) |
 
-### 雷神 ML903 mini 鼠标 —— [thunderobot-ml903mini.md](docs/protocols/thunderobot-ml903mini.md)
-- 星闪接收器 `369B:0114`、有线 `369B:00F3`；接口：UsagePage `0xFFA0`，输出 Report ID `0xA0`，输入 `0xA1`，64 字节
-- 请求：`A0 50 00…`（report_device_status）
-- 应答：`A1 50 <在线> … 25 <电量>…`；tag `0x25` 后一字节低 7 位为电量、最高位为充电
-- 来源：ML903-NearLink Driver（ITON）自带的通讯日志
+两种版本都会自动更新。安装版可以在「设置 → 应用」里卸载，卸载时会还原任务栏，并删除程序的设置和日志。
 
-### 盖世小鸡手柄 —— [gamesir-dongle.md](docs/protocols/gamesir-dongle.md)
-- 接收器 `3537:103E`；接口：`MI_01&COL04`，UsagePage `0xFFA0`，输出 Report ID `0x07`（32 字节），输入 `0x06`（64 字节）
-- 请求：`07 03 0A 01 00…`
-- 应答：`06 0E 0A 01 | id | fw[2] | mac[6] | 电量%`（接收器会持续推送全 0 的 `06` 包，需过滤）
-- 来源：GameSir Connect 的 SDK `sapjoyuniapis_x86.dll`（调用 + IAT hook 截获收发）
+### 系统要求
 
-### 飞智 黑武士 3 Pro —— [flydigi-vader3pro.md](docs/protocols/flydigi-vader3pro.md)
-- 接收器以 XInput 手柄（`045E:028E`）出现，没有厂商 HID 接口，私有指令只能经飞智内核过滤驱动 `Xbox360Filter64.sys`，
-  本程序加载飞智安装目录下的 `XboxComm64.dll` 收发（**需管理员权限**，需已安装飞智空间站，可与飞智后台服务共存）
-- 请求：15 字节 `A5 10 00… <和校验>`（GamePadInfo）
-- 应答（32 字节）：`[14..15]=A5 10`，`[16]` 设备 ID，`[17..20]` MAC，`[21..22]` 固件，`[23]` 电量
-- `[23]` 在 CH571 新固件上推测为 0~4 档（按 ×25% 显示，待更多数据核实）；老固件为 98~114 电压值
-- 来源：飞智空间站后台服务（.NET 反编译）
+- Windows 10，任务栏横向放置（在屏幕底部或顶部）
+- 任务栏竖着放时，会改为在托盘区显示程序图标，点它同样能打开弹出面板
+- Windows 11 尚未测试
 
-## 使用
+## 使用说明
 
-从 [Releases](https://github.com/AnLifeX/DeviceBatteryTray/releases) 下载：
-- **安装版** `DeviceBatteryTray-win-Setup.exe`：装到 `%LOCALAPPDATA%\DeviceBatteryTray`，不需要管理员权限；
-  缺 .NET 8 桌面运行时会自动安装；创建桌面和开始菜单快捷方式；可在「应用和功能」里卸载。
-- **便携版** `DeviceBatteryTray-win-Portable.zip`：解压到任意目录，运行 `设备电量.exe`
-  （需要自行安装 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0)）。
+**任务栏电量条**
+- 显示在托盘区左侧，只显示已连接、没有休眠的设备；设备多时分两行，最多显示 8 台，其余的在弹出面板里看。
+- 左键或右键点击电量条，打开弹出面板。
 
-两种都支持自动更新。
+**弹出面板**
+- 显示所有在线设备的电量、充电状态和更新时间，右上角可以立即刷新。
+- 底部可以打开主页面、设置，或退出程序。点面板外面或按 Esc 关闭。
 
-- **任务栏电量条**：托盘区左侧显示每个**在线**设备的「设备图标 + 电池格 + 百分比」，多个设备两行排列；
-  ≤ 40% 黄色、≤ 20% 红色、充电绿色（带闪电）。休眠 / 未连接 / 不支持的设备不显示。跟随任务栏深浅色。
-- 设备很多时：任务栏最多显示 8 格（两行四列），超出的最后一格显示「+N 台」；弹出面板限高，可滚动。
-- **弹出面板**：左键或右键点击电量条弹出（WPF-UI 风格，与主页面一致，上滑淡入 / 下滑淡出）。显示在线设备和更新时间；
-  右上角刷新（面板不关闭，原地更新）；有新版本时显示提示；底部「主页面」「设置」「退出」。点面板外或按 Esc 关闭。
-- **主页面**（WPF + [WPF-UI](https://github.com/lepoco/wpfui)，Fluent 风格，跟随系统深浅色，Win11 上有 Mica 背景）：
-  双击程序打开（程序已在运行时也一样，会唤起已有实例），关闭主页面程序仍在后台运行。
-  - 设备列表：接收器已插入的设备及状态（在线 / 休眠 / 需要管理员权限），没插的不显示。标题栏固定，列表滚动。
-    - 每台设备右侧的开关控制是否在任务栏和弹出面板中显示（默认全部显示；隐藏的设备也不提醒）。
-    - **同型号多台**：每个接收器单独读取（用 HID 序列号区分，没有序列号时用 USB 口），自动编号「型号 2」「型号 3」；
-      点名称旁的铅笔可以重命名（留空恢复默认）。名称和显示开关按设备记住；没有序列号的接收器换了 USB 口时，
-      如果同型号只有一台对不上，会自动沿用原来的设置。
-  - 右上角：刷新、主题（浅色 / 深色一键切换）、关于（模态框）、设置。
-  - 设置（左右滑动切换）：开机自启、刷新间隔（任意 5 ~ 3600 秒，默认 30）、低电量提醒阈值（默认 20%）、读取飞智黑武士开关、
-    自动更新开关和检查间隔、手动检查更新、打开日志。
-  - 设置和日志在 `%APPDATA%\DeviceBatteryTray\`（`settings.json`、`DeviceBatteryTray.log`）。
-- **自动更新**（可关闭；检查间隔 1 小时 ~ 每周，默认 6 小时）：启动 20 秒后及之后按间隔检查 GitHub 上已发布的 Release
-  （需要仓库公开；草稿不算）。由 Velopack 下载（优先增量包），程序退出后替换文件并自动重启（不弹通知）；
-  下载失败时主页面的更新横幅显示原因和「重试」。直接运行编译出的 exe 不支持更新。
-- **安装 / 更新界面**：使用统一的启动画面（`src/DeviceBatteryTray/splash.png`）。
-- **卸载**：会先还原任务栏，删除开机自启项和 `%APPDATA%\DeviceBatteryTray`。
-- **管理员权限**（仅为读取飞智黑武士）：
-  - 只有「设置里开着读取黑武士 + 装了飞智空间站 + 插着黑武士接收器」时才请求，否则以普通权限运行、不弹 UAC。
-  - 拒绝 UAC 的话照常运行，主页面黑武士卡片上有「以管理员身份重启」按钮；设置里关掉黑武士后永远不提权。
-  - 打开「开机自启」后，会创建一个「最高权限」计划任务；之后开机自启和手动双击启动都**不再弹 UAC**。
-- 任务栏内嵌的做法与 TrafficMonitor 相同（缩窄任务按钮区、把窗口挂进任务栏），退出、注销、关机时自动还原。目前仅支持 Win10 横向任务栏；竖向任务栏时会改为显示一个托盘图标作为入口。
+**主页面**（双击桌面图标打开；关闭主页面后，程序会继续在后台运行）
+- 列出所有已插入接收器的设备及其状态（在线、休眠、需要管理员权限）。
+- 点名称旁的铅笔可以改名（留空恢复默认）；右侧开关控制这台设备是否显示在任务栏和弹出面板里，隐藏的设备也不会提醒。
+- 有新版本时，页面顶部会显示提示，可以立即更新。
 
-命令行（`current\DeviceBatteryTray.exe` 或便携版目录里的同名程序）：
-- `--background`：只常驻任务栏、不打开主页面（开机自启用的就是这个）
-- `--exit`：让正在运行的实例正常退出
-- `--restore-taskbar`：程序被强制结束后，任务按钮区还是缩窄的，用它还原
-- `--dump out.txt`：读一遍所有设备，写出原始收发记录（排查设备问题用），另外输出任务栏电量条预览 `out.png`
-- `--no-elevate`：不请求管理员权限
+**设置**
 
-## 编译与发布
+| 选项 | 默认 | 说明 |
+|---|---|---|
+| 开机自启 | 关 | 登录 Windows 后在后台启动 |
+| 刷新间隔 | 30 秒 | 多久读取一次电量，可设 5 ~ 3600 秒 |
+| 低电量提醒 | 低于 20% | 可选 10% ~ 30% 或关闭；充电中、已隐藏的设备不提醒 |
+| 读取飞智黑武士 | 开 | 需要管理员权限，见下方说明 |
+| 自动更新 | 开 | 检查间隔可选 1 小时 ~ 每周，默认 6 小时 |
 
-```powershell
-dotnet publish src/DeviceBatteryTray -c Release -r win-x64 --self-contained false -o publish
-dotnet tool restore   # 安装打包工具 vpk（Velopack，版本见 .config/dotnet-tools.json）
-dotnet vpk pack -u DeviceBatteryTray -v 0.1.0 -p publish -e DeviceBatteryTray.exe --packTitle 设备电量 -i src/DeviceBatteryTray/app.ico -f net8-x64-desktop --splashImage src/DeviceBatteryTray/splash.png --splashProgressColor "#2DD4BF"
-```
+### 飞智黑武士与管理员权限
 
-CI（`.github/workflows/ci.yml`）只在推送 `vX.Y.Z` 标签时运行：编译、用 Velopack 打包（含相对上一已发布版本的增量包），
-创建**草稿** Release。确认后在 GitHub 上点「Publish release」，程序的自动更新才会看到它。不上传构建产物、不使用缓存。
-```
-git tag v0.2.0
-git push origin v0.2.0
-```
-本地版本号在 `DeviceBatteryTray.csproj` 的 `VersionPrefix`。
+读取飞智黑武士 3 Pro 的电量需要管理员权限。程序只在**同时满足**以下条件时才会请求：
+设置里开着「读取飞智黑武士」、装了飞智空间站、插着黑武士的接收器。其他情况下都以普通权限运行，不会弹出 UAC。
 
-测试更新流程：用 `vpk pack` 依次打包两个版本到同一个目录，安装旧版本后，设置环境变量
-`DEVICEBATTERYTRAY_UPDATE_DIR` 指向该目录再启动程序，就会从本地目录更新。
+- 拒绝 UAC 也能正常使用，只是读不到黑武士；之后可以在主页面黑武士那一行点「以管理员身份重启」。
+- 打开「开机自启」后，开机和手动启动都不会再弹 UAC。
+- 不用黑武士的话，在设置里关掉「读取飞智黑武士」，程序就永远不会请求管理员权限。
 
-本地开发测试（只在 Debug 编译里有，发布的 Release 版本没有这些入口）：
-- **演示模式**：设置 →「其他」里打开，或 `--demo` 启动。用模拟设备展示任务栏电量条、弹出面板和主页面，不读取真实设备；
-  低电量提醒照常弹出，「立即更新」模拟下载（第一次会模拟失败以展示重试）；重启后自动关闭。
-- `--demo-ui [home|settings|flyout] [light|dark] [out.png]`：用演示数据打开主页面 / 弹出面板；给出 png 路径时渲染成图片后退出。
+## 常见问题
 
-程序图标 `app.ico` 和安装启动画面 `splash.png` 由 `tools/IconGen` 生成（方案 ring：深色底 + 渐变电量环 + 闪电）：
-```
-dotnet run --project tools/IconGen -- src/DeviceBatteryTray/app.ico preview.png --design ring
-dotnet run --project tools/IconGen -- --splash src/DeviceBatteryTray/splash.png --design ring
-dotnet run --project tools/IconGen -- --candidates candidates.png   # 所有方案对比
-```
+<details>
+<summary><b>任务栏上没有显示某台设备？</b></summary>
 
-## 目录
+电量条只显示已连接、没有休眠的设备。设备休眠时会自动隐藏，唤醒后（动一下鼠标、按一下键盘）下次刷新就会出现。
+也可以打开主页面看看它的状态，以及是否被右侧的开关隐藏了。
+</details>
 
-- `src/DeviceBatteryTray/` 托盘程序（.NET 8 WinForms）
-  - `Hid/` HID 枚举与请求/应答
-  - `Devices/` 各设备的电量读取
-  - `Tray/` 任务栏内嵌条、弹出面板、主逻辑
-  - `Views/` 主页面和弹出面板（WPF：窗口、设备页、设置页、ViewModel）
-  - `Ui/` 主题（深浅色）、演示数据、程序图标
-  - `AppSettings.cs` 设置，`AutoStart.cs` 开机自启，`Updater.cs` 自动更新（Velopack）
-- `tools/HidProbe/` HID 调试工具：列接口（含 Report ID）/ 发包 / 被动监听 / 读 Feature
-- `tools/GameSirProbe/` 32 位，调用盖世小鸡 SDK 并截获其 HID 收发
-- `tools/FlydigiProbe/` 经飞智过滤驱动查询黑武士（需管理员）
-- `tools/IconGen/` 生成程序图标和安装启动画面
-- `docs/protocols/` 各设备协议笔记
+<details>
+<summary><b>安装时提示「Windows 已保护你的电脑」？</b></summary>
+
+程序没有代码签名证书，第一次运行时 SmartScreen 可能会拦截。点「更多信息」→「仍要运行」即可。
+</details>
+
+<details>
+<summary><b>程序被强制结束后，任务栏上的按钮区变窄了？</b></summary>
+
+程序正常退出时会自动还原任务栏，被强制结束时则来不及。重新打开程序再正常退出即可恢复；
+也可以在命令行运行一次 `"%LOCALAPPDATA%\DeviceBatteryTray\current\DeviceBatteryTray.exe" --restore-taskbar`。
+</details>
+
+<details>
+<summary><b>飞智黑武士的电量为什么是「估算」？</b></summary>
+
+手柄只上报大致的电量档位，不是精确的百分比，所以显示的是按档位换算的估算值。
+</details>
+
+<details>
+<summary><b>设置和日志存在哪里？</b></summary>
+
+在 `%APPDATA%\DeviceBatteryTray\` 下：`settings.json` 是设置，`DeviceBatteryTray.log` 是日志。反馈问题时附上日志，方便排查。
+</details>
+
+<details>
+<summary><b>命令行参数</b></summary>
+
+程序位置：安装版是 `%LOCALAPPDATA%\DeviceBatteryTray\current\DeviceBatteryTray.exe`，便携版是解压目录里 `current\DeviceBatteryTray.exe`。
+
+| 参数 | 说明 |
+|---|---|
+| `--background` | 只在任务栏后台运行，不打开主页面（开机自启用的就是它） |
+| `--exit` | 让正在运行的程序正常退出 |
+| `--restore-taskbar` | 还原被缩窄的任务栏按钮区 |
+| `--no-elevate` | 不请求管理员权限 |
+| `--dump out.txt` | 读一遍所有设备，把原始收发记录写到 `out.txt`，反馈设备问题时使用 |
+</details>
+
+## 原理
+
+各设备的电量协议来自对官方驱动软件的分析，并在实机上验证过。程序直接通过 USB HID 与接收器通讯，不依赖厂商软件（飞智黑武士除外）。
+协议细节见 [docs/protocols](docs/protocols/README.md)，编译和发布见[开发说明](docs/development.md)。
 
 ## 声明
 
-本项目与上述厂商无关。协议通过分析本机已安装的官方软件得到，仅用于读取自己设备的电量。
+本项目与上述设备厂商无关。协议通过分析本机已安装的官方软件得到，仅用于读取自己设备的电量。

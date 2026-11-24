@@ -41,31 +41,36 @@ public static class Program
         if (args.Length == 2 && args[0] == "--dump") { Dump(args[1]); return; }
 
 #if DEBUG
-        // 开发用：--demo-ui [home|settings|flyout] [light|dark] [out.png] 用演示数据打开主页面（不读设备、不挂任务栏）
+        // 开发用：--demo-ui [home|settings|flyout|strip] [light|dark] [out.png] [--clean] 用演示数据打开主页面（不读设备、不挂任务栏）
+        // --clean：README 截图用，不显示演示 / 更新横幅和演示专用设备，图片背景透明、主页面带圆角
         if (args.Length >= 1 && args[0] == "--demo-ui")
         {
+            bool clean = args.Contains("--clean");
+            var a = args.Where(x => x != "--clean").ToArray();
             ApplicationConfiguration.Initialize();
-            if (args.Length > 2) { AppSettings.Current.Theme = args[2] == "dark" ? ThemeMode.Dark : ThemeMode.Light; Theme.Invalidate(); }
+            if (a.Length > 1 && a[1] == "strip" && a.Length > 3) { SaveStripPreview(a[3]); return; }
+            if (a.Length > 2) { AppSettings.Current.Theme = a[2] == "dark" ? ThemeMode.Dark : ThemeMode.Light; Theme.Invalidate(); }
             Views.WpfHost.EnsureApp();
             System.Windows.Window w;
-            if (args.Length > 1 && args[1] == "flyout")
+            if (a.Length > 1 && a[1] == "flyout")
             {
-                var f = new Views.FlyoutWindow(new DemoModel());
+                var f = new Views.FlyoutWindow(new DemoModel(clean));
                 var wa = Screen.PrimaryScreen!.WorkingArea;
                 f.ShowNear(new Point(wa.Right - 300, wa.Bottom));
                 w = f;
             }
             else
             {
-                w = new Views.MainWindow(new DemoModel(), args.Length > 1 && args[1] == "settings" ? MainPage.Settings : MainPage.Home);
-                if (args.Length > 1 && args[1] == "about") Views.MainWindow.ViewModel!.AboutOpen = true;
+                w = new Views.MainWindow(new DemoModel(clean), a.Length > 1 && a[1] == "settings" ? MainPage.Settings : MainPage.Home);
+                if (a.Length > 1 && a[1] == "about") Views.MainWindow.ViewModel!.AboutOpen = true;
+                if (clean) w.Height = 470; // 截图只有 4 台设备，去掉下面的空白
                 Views.WpfHost.Show(w);
             }
             w.Closed += (_, _) => Application.Exit();
-            if (args.Length > 3) // 第 4 个参数：渲染成图片后退出（锁屏 / 远程时也能出图）
+            if (a.Length > 3) // 第 4 个参数：渲染成图片后退出（锁屏 / 远程时也能出图）
             {
                 var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
-                t.Tick += (_, _) => { t.Stop(); Views.WpfHost.SaveSnapshot(w, args[3]); w.Close(); };
+                t.Tick += (_, _) => { t.Stop(); Views.WpfHost.SaveSnapshot(w, a[3], transparent: clean); w.Close(); };
                 t.Start();
             }
             Application.Run();
@@ -251,18 +256,36 @@ public static class Program
     }
 
 #if DEBUG
-    /// <summary>--demo-ui 用的演示数据。</summary>
-    sealed class DemoModel : IAppModel
+    /// <summary>README 截图用的设备：每个支持的型号一台（不含演示专用的假设备）。</summary>
+    static List<DeviceStatus> ReadmeDevices() =>
+        DeviceList.Build(DemoData.Raw.Where(r => r.Key is "" or "demo-a" && !r.Model.Contains("演示")));
+
+    /// <summary>任务栏电量条预览（深色任务栏，2 倍大小）。</summary>
+    static void SaveStripPreview(string file)
     {
-        public IReadOnlyList<DeviceStatus> Devices => DeviceList.Build(DemoData.Raw)
+        using var strip = TaskbarWidget.Render(ReadmeDevices().Where(d => d.Shown)
+            .Select(d => new TaskbarWidget.Item(d.Kind, d.Name, d.Reading!)).ToList(), 80, Color.White);
+        using var bmp = new Bitmap(strip.Width + 48, strip.Height);
+        using (var g = Graphics.FromImage(bmp))
+        {
+            g.Clear(Color.FromArgb(0x20, 0x20, 0x20));
+            g.DrawImage(strip, 24, 0);
+        }
+        bmp.Save(file);
+    }
+
+    /// <summary>--demo-ui 用的演示数据；clean 为 README 截图用（见 --clean）。</summary>
+    sealed class DemoModel(bool clean = false) : IAppModel
+    {
+        public IReadOnlyList<DeviceStatus> Devices => clean ? ReadmeDevices() : DeviceList.Build(DemoData.Raw)
             .Append(new DeviceStatus("demo-admin", DeviceKind.Gamepad, "飞智 黑武士 3 Pro（普通权限时）",
                 new BatteryReading(ReadState.Error, Detail: FlydigiVader.NeedAdminDetail))).ToList();
         public DateTime? UpdatedAt => new DateTime(2026, 11, 24, 14, 32, 5);
         public bool Refreshing => false;
-        public UpdateState Update => new(UpdateStatus.Available, new AppUpdate(new Version(0, 2, 0), null!));
+        public UpdateState Update => clean ? UpdateState.Idle : new(UpdateStatus.Available, new AppUpdate(new Version(0, 2, 0), null!));
         public bool AutoStart { get => true; set { } }
         public bool Elevated => true;
-        public bool Demo { get => true; set { } }
+        public bool Demo { get => !clean; set { } }
         public event Action? Changed { add { } remove { } }
         public void Refresh() { }
         public void CheckUpdate() { }
