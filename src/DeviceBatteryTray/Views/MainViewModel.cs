@@ -55,6 +55,8 @@ public sealed class DeviceItem : Observable
     public string PercentText { get => _percentText; private set => Set(ref _percentText, value); }
     public string StateText { get => _stateText; private set => Set(ref _stateText, value); }
     public bool Online { get => _online; private set => Set(ref _online, value); }
+    public bool Charging { get => _charging; private set => Set(ref _charging, value); }
+    private bool _charging;
     /// <summary>百分比下面的小字：充电中 / 估算。</summary>
     public string Note { get => _note; private set => Set(ref _note, value); }
     public bool NeedsAdmin { get => _needsAdmin; private set => Set(ref _needsAdmin, value); }
@@ -66,6 +68,7 @@ public sealed class DeviceItem : Observable
         NeedsAdmin = r.Detail == FlydigiVader.NeedAdminDetail;
         Percent = Online ? r.Percent : 0;
         PercentText = Online ? $"{r.Percent}%" : "";
+        Charging = Online && r.Charging;
         Note = !Online ? "" : r.Charging ? "充电中" : r.Detail ?? "";
         StateText = Online || NeedsAdmin ? "" : r.State == ReadState.Offline ? "休眠" : "读取失败";
         Level = !Online ? BatteryLevel.None : r.Charging ? BatteryLevel.Charging

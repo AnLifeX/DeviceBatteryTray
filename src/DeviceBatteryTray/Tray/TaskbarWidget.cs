@@ -151,7 +151,6 @@ public sealed class TaskbarWidget : Form
         float scale = h / 40f; // Win10 100% 缩放时任务栏高 40px
 
         using var glyphFont = new Font(Glyphs.FontName, 14f * scale, GraphicsUnit.Pixel);
-        using var battFont = new Font(Glyphs.FontName, 15f * scale, GraphicsUnit.Pixel);
         using var textFont = new Font("Segoe UI", 12f * scale, FontStyle.Regular, GraphicsUnit.Pixel);
 
         bool twoRows = shown.Count > 1;
@@ -189,8 +188,12 @@ public sealed class TaskbarWidget : Form
                 g.DrawString(Glyphs.Device(it.Kind), glyphFont, devBrush, line with { Width = glyphW, Y = line.Y + scale }, center);
 
                 using var accBrush = new SolidBrush(accent);
-                g.DrawString(Glyphs.Battery(it.Reading), battFont, accBrush,
-                    line with { X = x + glyphW + gap, Width = battW, Y = line.Y + scale }, center);
+                // 自绘电池：外框用前景色，填充用强调色（充电绿 / 偏低黄 / 低电量红 / 正常前景色），充电时中间有闪电
+                float bh = 9.5f * scale, bw = battW;
+                var battRect = new RectangleF(x + glyphW + gap, line.Y + (rowH - bh) / 2f + scale * 0.5f, bw, bh);
+                bool darkBar = fore.GetBrightness() > 0.5f;
+                Glyphs.DrawBattery(g, battRect, it.Reading, fore, accent,
+                    darkBar ? Color.FromArgb(32, 32, 32) : Color.FromArgb(238, 238, 238));
 
                 g.DrawString(Glyphs.Percent(it.Reading), textFont, accBrush,
                     line with { X = x + glyphW + gap + battW + gap, Width = textMax + 8 * scale }, center);

@@ -26,8 +26,24 @@
                 <DataTrigger Binding="{Binding Level}" Value="Critical">
                     <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
                 </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 电池图标：充电绿色 + 中间闪电，偏低黄、低电量红，正常为中性色（与任务栏一致） -->
+        <Style x:Key="BatteryIcon" TargetType="local:BatteryGlyph">
+            <Setter Property="Stroke" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="Fill" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="Bolt" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Style.Triggers>
                 <DataTrigger Binding="{Binding Level}" Value="Charging">
-                    <Setter Property="Foreground" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Level}" Value="Caution">
+                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Level}" Value="Critical">
+                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorCriticalBrush}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -150,6 +166,7 @@
                                 <StackPanel Orientation="Horizontal" Visibility="{Binding Online, Converter={StaticResource BoolToVis}}">
                                     <ProgressBar Style="{StaticResource BatteryBar}" Value="{Binding Percent, Mode=OneWay}" Maximum="100"
                                                  Width="150" Height="4" VerticalAlignment="Center" />
+                                    <local:BatteryGlyph Style="{StaticResource BatteryIcon}" Percent="{Binding Percent}" Charging="{Binding Charging}" Width="28" Height="14" Margin="16,0,0,0" />
                                     <TextBlock Style="{StaticResource PercentText}" Text="{Binding PercentText}"
                                                Width="64" TextAlignment="Right" VerticalAlignment="Center" />
                                 </StackPanel>

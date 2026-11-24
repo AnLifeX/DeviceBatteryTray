@@ -20,8 +20,24 @@
                 <DataTrigger Binding="{Binding Level}" Value="Critical">
                     <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
                 </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 电池图标：充电绿色 + 中间闪电，偏低黄、低电量红，正常为中性色（与任务栏一致） -->
+        <Style x:Key="BatteryIcon" TargetType="local:BatteryGlyph">
+            <Setter Property="Stroke" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="Fill" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="Bolt" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Style.Triggers>
                 <DataTrigger Binding="{Binding Level}" Value="Charging">
-                    <Setter Property="Foreground" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Level}" Value="Caution">
+                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Level}" Value="Critical">
+                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorCriticalBrush}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -128,14 +144,16 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="36" />
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="64" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="58" />
                                     </Grid.ColumnDefinitions>
                                     <ui:FontIcon Glyph="{Binding Glyph}" FontFamily="Segoe MDL2 Assets" FontSize="20" HorizontalAlignment="Left" VerticalAlignment="Center" />
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <ui:TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                                         <ProgressBar Style="{StaticResource RowBar}" Value="{Binding Percent, Mode=OneWay}" Maximum="100" Height="4" Margin="0,8,8,0" />
                                     </StackPanel>
-                                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                    <local:BatteryGlyph Grid.Column="2" Style="{StaticResource BatteryIcon}" Percent="{Binding Percent}" Charging="{Binding Charging}" Width="24" Height="12" Margin="4,0,0,0" />
+                                    <StackPanel Grid.Column="3" VerticalAlignment="Center">
                                         <TextBlock Style="{StaticResource RowPercent}" Text="{Binding PercentText}" TextAlignment="Right" />
                                         <ui:TextBlock FontTypography="Caption" Text="{Binding Note}" TextAlignment="Right"
                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
