@@ -1,11 +1,11 @@
-# 推送 vX.Y.Z 标签时编译、打包（build/package.ps1），并创建草稿 Release：
+# 推送 vX.Y.Z 标签时编译、打包（build/package.ps1），并发布 Release：
 #   DeviceBatteryTray-Setup.exe     安装包（安装 / 卸载 / 自动更新）
 #   DeviceBatteryTray-Portable.zip  便携版
 #
 #   git tag v0.2.0
 #   git push origin v0.2.0
 #
-# 草稿确认无误后在 GitHub 上点「Publish release」，程序的自动更新只认已发布的 Release。
+# 发布后，已安装的程序会通过自动更新收到新版本。
 # 不上传构建产物、不使用构建缓存。
 name: Release
 
@@ -38,11 +38,11 @@ jobs:
         shell: pwsh
         run: ./build/package.ps1 -Version ${{ steps.ver.outputs.version }}
 
-      - name: 创建草稿 Release
+      - name: 发布 Release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: >
           gh release create $env:GITHUB_REF_NAME
           Releases/DeviceBatteryTray-Setup.exe Releases/DeviceBatteryTray-Portable.zip
-          --draft --title "设备电量 $env:GITHUB_REF_NAME" --generate-notes
+          --title "设备电量 $env:GITHUB_REF_NAME" --generate-notes

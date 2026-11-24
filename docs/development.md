@@ -52,8 +52,8 @@ DeviceBatteryTray-Setup.exe --update --dir <便携版目录> --background
 
 ## 发布
 
-CI（`.github/workflows/ci.yml`）只在推送 `vX.Y.Z` 标签时运行：执行打包脚本，并创建**草稿** Release。
-确认无误后在 GitHub 上点「Publish release」，已安装的程序才能通过自动更新收到新版本。CI 不上传构建产物、不使用缓存。
+CI（`.github/workflows/ci.yml`）只在推送 `vX.Y.Z` 标签时运行：执行打包脚本并直接发布 Release，
+已安装的程序随后通过自动更新收到新版本。CI 不上传构建产物、不使用缓存。
 
 ```
 git tag vX.Y.Z
