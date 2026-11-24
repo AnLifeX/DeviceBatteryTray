@@ -42,7 +42,7 @@ public static class Program
             var a = args.Where(x => x != "--clean").ToArray();
             ApplicationConfiguration.Initialize();
             if (a.Length > 1 && a[1] == "strip" && a.Length > 3) { SaveStripPreview(a[3]); return; }
-            if (a.Length > 2) { AppSettings.Current.Theme = a[2] == "dark" ? ThemeMode.Dark : ThemeMode.Light; Theme.Invalidate(); }
+            if (a.Length > 2) AppSettings.Current.Theme = a[2] == "dark" ? ThemeMode.Dark : ThemeMode.Light;
             Views.WpfHost.EnsureApp();
             System.Windows.Window w;
             if (a.Length > 1 && a[1] == "flyout")

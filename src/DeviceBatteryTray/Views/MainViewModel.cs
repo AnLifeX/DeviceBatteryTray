@@ -164,7 +164,7 @@ public sealed class MainViewModel : Observable
         ShowAboutCommand = new RelayCommand(() => AboutOpen = true);
         CloseAboutCommand = new RelayCommand(() => AboutOpen = false);
         // 浅色 ↔ 深色（从「跟随系统」第一次点击时，切到和当前相反的颜色）
-        ToggleThemeCommand = new RelayCommand(() => AppSettings.Change(s => s.Theme = Ui.Theme.Current.Dark ? ThemeMode.Light : ThemeMode.Dark));
+        ToggleThemeCommand = new RelayCommand(() => AppSettings.Change(s => s.Theme = Ui.Theme.Dark ? ThemeMode.Light : ThemeMode.Dark));
         Sync();
     }
 
@@ -282,9 +282,9 @@ public sealed class MainViewModel : Observable
     public string Version => "v" + Updater.CurrentText;
 
     /// <summary>主题按钮：图标表示当前颜色（太阳 = 浅色，月亮 = 深色），点一下切换。</summary>
-    public Wpf.Ui.Controls.SymbolRegular ThemeSymbol => Ui.Theme.Current.Dark
+    public Wpf.Ui.Controls.SymbolRegular ThemeSymbol => Ui.Theme.Dark
         ? Wpf.Ui.Controls.SymbolRegular.WeatherMoon24 : Wpf.Ui.Controls.SymbolRegular.WeatherSunny24;
-    public string ThemeTip => Ui.Theme.Current.Dark ? "深色（点击切换到浅色）" : "浅色（点击切换到深色）";
+    public string ThemeTip => Ui.Theme.Dark ? "深色（点击切换到浅色）" : "浅色（点击切换到深色）";
 
     /// <summary>关于页用的大图标。</summary>
     public System.Windows.Media.ImageSource? AppIconImage => MainWindow.AppIconSource;

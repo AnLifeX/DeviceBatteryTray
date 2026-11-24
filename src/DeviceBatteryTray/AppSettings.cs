@@ -16,8 +16,9 @@ public sealed class AppSettings
     /// <summary>读取飞智黑武士（需要管理员权限，只在检测到接收器时才请求）。</summary>
     public bool ReadFlydigi { get; set; } = true;
 
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public ThemeMode Theme { get; set; } = ThemeMode.System;
+    /// <summary>深浅色。没有这一项（第一次运行）或是旧版本的 "System" 时，按 Windows 当前的深浅色确定并保存。</summary>
+    [JsonConverter(typeof(ThemeConverter))]
+    public ThemeMode? Theme { get; set; }
 
     /// <summary>自动更新：按间隔检查，发现新版本就下载新 exe、替换自己并重启。</summary>
     public bool AutoUpdate { get; set; } = true;
@@ -54,7 +55,6 @@ public sealed class AppSettings
         edit(Current);
         Current.Normalize();
         Save();
-        Ui.Theme.Invalidate();
         Changed?.Invoke();
     }
 
@@ -76,22 +76,35 @@ public sealed class AppSettings
             {
                 if (File.Exists(path) && JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), Json) is { } s)
                 {
+                    bool initTheme = s.Theme == null;
                     s.Normalize();
-                    if (path == OldFilePath) MigrateFrom(s);
+                    if (path == OldFilePath || initTheme) WriteFile(s);
+                    if (path == OldFilePath) DeleteOld();
                     return s;
                 }
             }
             catch (Exception e) { Log.W($"读取设置失败（{path}）: " + e.Message); }
         }
-        return new AppSettings();
+        var created = new AppSettings();
+        created.Normalize();
+        WriteFile(created);
+        return created;
     }
 
-    static void MigrateFrom(AppSettings s)
+    static void WriteFile(AppSettings s)
     {
         try
         {
             Directory.CreateDirectory(AppPaths.DataDir);
             File.WriteAllText(FilePath, JsonSerializer.Serialize(s, Json));
+        }
+        catch (Exception e) { Log.W("保存设置失败: " + e.Message); }
+    }
+
+    static void DeleteOld()
+    {
+        try
+        {
             File.Delete(OldFilePath); // 只删文件：那个目录可能是安装目录
         }
         catch { }
@@ -102,6 +115,7 @@ public sealed class AppSettings
         RefreshSeconds = Math.Clamp(RefreshSeconds, 5, 3600);
         LowBatteryPercent = Math.Clamp(LowBatteryPercent, 0, 100);
         UpdateCheckHours = Math.Clamp(UpdateCheckHours, 1, 24 * 30);
+        Theme ??= Ui.Theme.SystemDark() ? ThemeMode.Dark : ThemeMode.Light;
         HiddenDevices ??= new();
         DeviceNames ??= new();
         SeenDevices ??= new();
@@ -110,4 +124,16 @@ public sealed class AppSettings
     public static string RefreshText(int sec) => sec < 60 ? $"{sec} 秒" : $"{sec / 60} 分钟";
     public static string LowBatteryText(int p) => p == 0 ? "不提醒" : $"低于 {p}%";
     public static string UpdateCheckText(int h) => h switch { < 24 => $"每 {h} 小时", 24 => "每天", 168 => "每周", _ => $"每 {h / 24} 天" };
+
+    /// <summary>Light / Dark；其他值（旧版本的 "System"）读成 null，由 Normalize 按系统深浅色确定。</summary>
+    sealed class ThemeConverter : JsonConverter<ThemeMode?>
+    {
+        public override ThemeMode? Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options) =>
+            reader.TokenType == JsonTokenType.String && Enum.TryParse<ThemeMode>(reader.GetString(), out var v) && Enum.IsDefined(v) ? v : null;
+
+        public override void Write(Utf8JsonWriter writer, ThemeMode? value, JsonSerializerOptions options)
+        {
+            if (value is { } v) writer.WriteStringValue(v.ToString()); else writer.WriteNullValue();
+        }
+    }
 }

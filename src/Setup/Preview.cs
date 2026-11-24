@@ -41,7 +41,7 @@ static class Preview
 
     /// <summary>
     /// 整个窗口渲染成 PNG（透明背景）。Win10 的透明窗口自带圆角和阴影；
-    /// 普通窗口（Win11，圆角由系统画）这里补上 8px 圆角和背景。
+    /// 普通窗口（Win11，圆角由系统画）这里补上圆角。
     /// </summary>
     static void Save(Window w, string file)
     {
@@ -52,8 +52,7 @@ static class Preview
         {
             if (!w.AllowsTransparency)
             {
-                dc.PushClip(new RectangleGeometry(rect, 8, 8));
-                dc.DrawRectangle((Brush?)w.TryFindResource("ApplicationBackgroundBrush") ?? Brushes.White, null, rect);
+                dc.PushClip(new RectangleGeometry(rect, DeviceBatteryTray.Views.ChromeWindow.Radius, DeviceBatteryTray.Views.ChromeWindow.Radius));
             }
             // 固定视口，避免 VisualBrush 按内容边界拉伸
             dc.DrawRectangle(new VisualBrush(w) { ViewboxUnits = BrushMappingMode.Absolute, Viewbox = rect, Stretch = Stretch.None }, null, rect);

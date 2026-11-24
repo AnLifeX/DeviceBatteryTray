@@ -1,12 +1,11 @@
 using System.Windows.Media.Imaging;
-using Wpf.Ui.Appearance;
 
 namespace DeviceBatteryTray.Views;
 
 using DeviceBatteryTray.Ui;
 
 /// <summary>主页面（WPF + WPF-UI）：设备列表，右上角进入设置（左右滑动切换）。关闭窗口程序继续在任务栏运行。</summary>
-public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
+public partial class MainWindow : ChromeWindow
 {
     /// <summary>页面通过它拿到数据。</summary>
     public static MainViewModel? ViewModel { get; private set; }
@@ -19,8 +18,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private readonly System.Windows.Threading.DispatcherTimer _tick = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private MainPage _page;
 
-    static MainWindow() => Corners.KeepBorderlessWhenTransparent(typeof(MainWindow));
-
     public MainWindow(IAppModel model, MainPage page)
     {
         _m = model;
@@ -29,10 +26,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         DataContext = ViewModel;
         InitializeComponent();
 
-        WindowBackdropType = WpfHost.Backdrop;
-        Corners.RoundWindow(this, 8); // Win10 没有系统窗口圆角
-        TitleIcon.Source = AppIconSource;
-        Icon = TitleIcon.Source;
+        Icon = AppIconSource;
 
         ViewModel.NavigateRequested += p => Page = p;
         ViewModel.PropertyChanged += (_, e) =>
@@ -47,17 +41,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         AppSettings.Changed += OnSettingsChanged;
         _tick.Tick += (_, _) => ViewModel?.Tick();
         _tick.Start();
-        Loaded += (_, _) =>
-        {
-            SystemThemeWatcher.Watch(this, WpfHost.Backdrop, updateAccents: true);
-            WpfHost.ApplyTheme();
-            Navigate(_page);
-        };
-        // 取消主题监听要在 Closing 里做：到 Closed 时窗口句柄已销毁，UnWatch 会抛异常并打断后续的 Closed 处理
-        Closing += (_, _) =>
-        {
-            try { SystemThemeWatcher.UnWatch(this); } catch (Exception e) { Log.W("取消主题监听失败: " + e.Message); }
-        };
+        Loaded += (_, _) => Navigate(_page);
         Closed += (_, _) =>
         {
             _m.Changed -= OnModelChanged;

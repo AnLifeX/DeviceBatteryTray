@@ -48,13 +48,14 @@ static class Program
 
         // 先建好 Application 和主题资源，窗口创建时要用到
         var app = new Application { ShutdownMode = ShutdownMode.OnMainWindowClose };
+        bool dark = Wpf.Ui.Appearance.ApplicationThemeManager.GetSystemTheme() == Wpf.Ui.Appearance.SystemTheme.Dark;
         app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ThemesDictionary
         {
-            Theme = Wpf.Ui.Appearance.ApplicationThemeManager.GetSystemTheme() == Wpf.Ui.Appearance.SystemTheme.Dark
-                ? Wpf.Ui.Appearance.ApplicationTheme.Dark : Wpf.Ui.Appearance.ApplicationTheme.Light,
+            Theme = dark ? Wpf.Ui.Appearance.ApplicationTheme.Dark : Wpf.Ui.Appearance.ApplicationTheme.Light,
         });
         app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ControlsDictionary());
         app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Setup;component/Styles.xaml") });
+        DeviceBatteryTray.Views.Accent.Apply(dark);
         app.DispatcherUnhandledException += (_, e) =>
         {
             Log.W("界面异常: " + e.Exception);

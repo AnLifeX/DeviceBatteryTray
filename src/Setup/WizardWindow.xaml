@@ -1,25 +1,17 @@
-<ui:FluentWindow x:Class="DeviceBatteryTray.Setup.WizardWindow"
-                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 Width="700" Height="480" ResizeMode="NoResize"
-                 WindowStartupLocation="CenterScreen"
-                 ExtendsContentIntoTitleBar="True"
-                 WindowCornerPreference="Round">
+<views:ChromeWindow x:Class="DeviceBatteryTray.Setup.WizardWindow"
+                    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                    xmlns:views="clr-namespace:DeviceBatteryTray.Views"
+                    Width="700" Height="480" ResizeMode="CanMinimize"
+                    WindowStartupLocation="CenterScreen">
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar x:Name="TitleBar" Grid.Row="0" ShowMaximize="False" CanMaximize="False">
-            <ui:TitleBar.Icon>
-                <ui:ImageIcon x:Name="TitleIcon" />
-            </ui:TitleBar.Icon>
-        </ui:TitleBar>
-
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="200" />
                 <ColumnDefinition Width="*" />
@@ -101,10 +93,10 @@
         </Grid>
 
         <!-- 底部按钮 -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,20,18">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,20,18">
             <ui:Button x:Name="BackButton" Content="上一步" />
             <ui:Button x:Name="NextButton" Content="下一步" Appearance="Primary" Margin="8,0,0,0" />
             <ui:Button x:Name="CancelButton" Content="取消" Margin="8,0,0,0" />
         </StackPanel>
     </Grid>
-</ui:FluentWindow>
+</views:ChromeWindow>

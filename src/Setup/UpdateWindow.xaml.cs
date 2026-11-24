@@ -12,7 +12,7 @@ namespace DeviceBatteryTray.Setup;
 /// 自动更新：主程序下载好新的安装包后用 --update 启动它，然后自己退出。
 /// 这里等它退出、替换文件，再把它重新启动起来。出错时可以重试；关闭的话启动原来的版本。
 /// </summary>
-public partial class UpdateWindow : FluentWindow
+public partial class UpdateWindow : ChromeWindow
 {
     readonly string _dir;
     readonly int _waitPid;
@@ -22,21 +22,16 @@ public partial class UpdateWindow : FluentWindow
     /// <summary>预览用：不执行更新。</summary>
     internal bool NoRun { get; set; }
 
-    static UpdateWindow() => Corners.KeepBorderlessWhenTransparent(typeof(UpdateWindow));
-
     public UpdateWindow(string dir, int waitPid, bool background)
     {
         _dir = dir;
         _waitPid = waitPid;
         _background = background;
         InitializeComponent();
-        Corners.RoundWindow(this, 8);
         var logo = WizardWindow.LoadLogo();
         Logo.Source = logo;
-        TitleIcon.Source = logo;
         Icon = logo;
         Title = $"正在更新{Product.Name}";
-        TitleBar.Title = Title;
         Heading.Text = Title;
         var old = OldVersion();
         VersionText.Text = old != null ? $"v{old} → v{Product.Version}" : $"v{Product.Version}";
@@ -90,7 +85,7 @@ public partial class UpdateWindow : FluentWindow
         ErrorInfo.Message = message + $"\n日志：{Log.FilePath}";
         ErrorInfo.IsOpen = true;
         ErrorButtons.Visibility = Visibility.Visible;
-        TitleBar.ShowClose = true;
+        ShowClose = true;
     }
 
 #if DEBUG

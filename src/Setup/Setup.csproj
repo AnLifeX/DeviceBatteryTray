@@ -34,7 +34,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- 与主程序共用：Win10 窗口圆角 -->
+    <!-- 与主程序共用：主色、窗口外框、控件圆角 -->
+    <Compile Include="..\DeviceBatteryTray\Views\Accent.cs" Link="Shared\Accent.cs" />
+    <Compile Include="..\DeviceBatteryTray\Views\ChromeWindow.cs" Link="Shared\ChromeWindow.cs" />
     <Compile Include="..\DeviceBatteryTray\Views\Corners.cs" Link="Shared\Corners.cs" />
     <Resource Include="..\DeviceBatteryTray\app.ico" Link="app.ico" />
   </ItemGroup>

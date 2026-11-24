@@ -1,33 +1,21 @@
-<ui:FluentWindow x:Class="DeviceBatteryTray.Views.MainWindow"
-                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 Title="设备电量"
-                 Width="760" Height="640" MinWidth="560" MinHeight="460"
-                 WindowStartupLocation="CenterScreen"
-                 ExtendsContentIntoTitleBar="True"
-                 WindowCornerPreference="Round">
+<local:ChromeWindow x:Class="DeviceBatteryTray.Views.MainWindow"
+                    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                    xmlns:local="clr-namespace:DeviceBatteryTray.Views"
+                    Title="设备电量"
+                    Width="760" Height="640" MinWidth="560" MinHeight="460"
+                    WindowStartupLocation="CenterScreen">
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-
-        <ui:TitleBar Grid.Row="0" Title="设备电量">
-            <ui:TitleBar.Icon>
-                <ui:ImageIcon x:Name="TitleIcon" />
-            </ui:TitleBar.Icon>
-        </ui:TitleBar>
-
         <!-- 单页：设备 / 设置，切换时左右滑动 -->
-        <ContentControl x:Name="Host" Grid.Row="1" Margin="0,4,0,0" Focusable="False">
+        <ContentControl x:Name="Host" Margin="0,4,0,0" Focusable="False">
             <ContentControl.RenderTransform>
                 <TranslateTransform x:Name="HostShift" />
             </ContentControl.RenderTransform>
         </ContentControl>
 
         <!-- 关于（模态框）：遮罩 + 居中卡片；Esc / 点遮罩 / 关闭按钮都能关 -->
-        <Grid x:Name="AboutOverlay" Grid.Row="1" Visibility="Collapsed" Opacity="0">
+        <Grid x:Name="AboutOverlay" Visibility="Collapsed" Opacity="0">
             <Rectangle Fill="#66000000" MouseLeftButtonUp="AboutBackdrop_Click" />
             <Border x:Name="AboutCard" Width="320" HorizontalAlignment="Center" VerticalAlignment="Center" CornerRadius="8" Padding="28,24"
                     Background="{DynamicResource ApplicationBackgroundBrush}" BorderBrush="{DynamicResource SurfaceStrokeColorFlyoutBrush}" BorderThickness="1"
@@ -60,4 +48,4 @@
             </Border>
         </Grid>
     </Grid>
-</ui:FluentWindow>
+</local:ChromeWindow>

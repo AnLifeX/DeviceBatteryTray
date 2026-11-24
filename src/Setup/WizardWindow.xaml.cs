@@ -18,7 +18,7 @@ public enum WizardMode { Install, Uninstall }
 /// 安装向导：欢迎 → 安装位置 → 附加选项 → 安装 → 完成；
 /// 卸载向导：确认 → 卸载 → 完成。
 /// </summary>
-public partial class WizardWindow : FluentWindow
+public partial class WizardWindow : ChromeWindow
 {
     readonly WizardMode _mode;
     readonly string _uninstallDir = "";
@@ -29,16 +29,12 @@ public partial class WizardWindow : FluentWindow
     int _index;
     bool _busy;
 
-    static WizardWindow() => Corners.KeepBorderlessWhenTransparent(typeof(WizardWindow));
-
     public WizardWindow(WizardMode mode, string? dir)
     {
         _mode = mode;
         InitializeComponent();
-        Corners.RoundWindow(this, 8);
         var logo = LoadLogo();
         Logo.Source = logo;
-        TitleIcon.Source = logo;
         Icon = logo;
         VersionText.Text = "版本 " + Product.Version;
 
@@ -60,7 +56,6 @@ public partial class WizardWindow : FluentWindow
             ConfirmText.Text = $"将移除设备电量{(string.IsNullOrEmpty(version) ? "" : " v" + version)}及其快捷方式和开机自启项。";
             ConfirmDir.Text = "位置：" + _uninstallDir;
         }
-        TitleBar.Title = Title;
 
         BackButton.Click += (_, _) => Go(_index - 1);
         NextButton.Click += async (_, _) => await NextAsync();
@@ -204,7 +199,7 @@ public partial class WizardWindow : FluentWindow
         Bar.Visibility = Visibility.Visible;
         _busy = true;
         CancelButton.IsEnabled = false;
-        TitleBar.ShowClose = false;
+        ShowClose = false;
 
         var progress = new Progress<Status>(s =>
         {
@@ -233,7 +228,7 @@ public partial class WizardWindow : FluentWindow
     void ShowDone()
     {
         _busy = false;
-        TitleBar.ShowClose = true;
+        ShowClose = true;
         if (_mode == WizardMode.Install)
         {
             DoneTitle.Text = _existing != null ? "升级完成" : "安装完成";
@@ -249,7 +244,7 @@ public partial class WizardWindow : FluentWindow
     void ShowError(string message)
     {
         _busy = false;
-        TitleBar.ShowClose = true;
+        ShowClose = true;
         StatusText.Visibility = Visibility.Collapsed;
         Bar.Visibility = Visibility.Collapsed;
         ErrorInfo.Title = _mode == WizardMode.Install ? "安装失败" : "卸载失败";

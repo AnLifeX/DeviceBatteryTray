@@ -77,7 +77,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         _app.BalloonTipClicked += (_, _) => { var a = _balloonClick; _balloonClick = null; OnBalloonDone(); a?.Invoke(); };
         _app.BalloonTipClosed += (_, _) => { _balloonClick = null; OnBalloonDone(); };
         _widget.Clicked += _ => ToggleFlyout();
-        SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged; // 深浅色 / 强调色切换
+        SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged; // 任务栏深浅色变化：电量条跟随任务栏颜色
         SystemEvents.SessionEnding += (_, _) => _widget.Detach();      // 注销/关机前还原任务栏
         Application.ApplicationExit += (_, _) => _widget.Detach();
         AppSettings.Changed += OnSettingsChanged;
@@ -111,7 +111,6 @@ public sealed class TrayApp : ApplicationContext, IAppModel
 
     private void OnUserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e) => _ui.Post(_ =>
     {
-        Theme.Invalidate();
         RefreshWidget();
         RaiseChanged();
     }, null);

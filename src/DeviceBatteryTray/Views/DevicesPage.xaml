@@ -105,11 +105,17 @@
         </Grid>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="32,0,32,24">
+            <!-- 至少占满可见高度：没有设备时，空状态在横幅下方的剩余空间里居中 -->
+            <Grid MinHeight="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <StackPanel Margin="32,0,32,0">
                 <!-- 演示模式提示 -->
                 <Border Visibility="{Binding Demo, Converter={StaticResource BoolToVis}}" CornerRadius="12" Padding="16,12" Margin="0,0,0,12"
                         Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{DynamicResource AccentFillColorDefaultBrush}" BorderThickness="1">
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -127,8 +133,8 @@
 
                 <!-- 新版本提示 -->
                 <Border Visibility="{Binding UpdateBannerOpen, Converter={StaticResource BoolToVis}}" CornerRadius="12" Padding="16,12" Margin="0,0,0,12"
-                        Background="{DynamicResource InfoBarInformationalSeverityBackgroundBrush}"
-                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                        Background="{DynamicResource AccentSubtleBackgroundBrush}"
+                        BorderBrush="{DynamicResource AccentFillColorDefaultBrush}" BorderThickness="1">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -220,26 +226,29 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <!-- 空状态 -->
-                <Border Visibility="{Binding NoDevices, Converter={StaticResource BoolToVis}}" CornerRadius="12" Padding="24,40"
-                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                    <StackPanel HorizontalAlignment="Center">
-                        <ui:SymbolIcon Symbol="PlugDisconnected24" FontSize="40" HorizontalAlignment="Center"
-                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                        <ui:TextBlock FontTypography="BodyStrong" Text="没有检测到设备" HorizontalAlignment="Center" Margin="0,14,0,4" />
-                        <ui:TextBlock Text="插入支持的接收器后会自动出现" HorizontalAlignment="Center"
-                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <ui:TextBlock FontTypography="Caption" Text="{Binding SupportedText}" HorizontalAlignment="Center" TextWrapping="Wrap"
-                                      TextAlignment="Center" Margin="0,16,0,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                    </StackPanel>
-                </Border>
-                <ui:ProgressRing IsIndeterminate="True" Visibility="{Binding Loading, Converter={StaticResource BoolToVis}}" Margin="0,40" />
-
-                <ui:TextBlock FontTypography="Caption" Margin="2,10,0,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"
+                <ui:TextBlock FontTypography="Caption" Margin="2,10,0,24" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"
                               Visibility="{Binding HasDevices, Converter={StaticResource BoolToVis}}"
                               Text="右侧开关控制设备是否在任务栏和弹出面板中显示；点名称旁的铅笔可以重命名，用来区分同型号的多台设备。" />
             </StackPanel>
+
+            <!-- 空状态：卡片填满剩余空间，内容在卡片里居中 -->
+            <Border Grid.Row="1" Margin="32,0,32,24" CornerRadius="12" Padding="24"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    Visibility="{Binding NoDevices, Converter={StaticResource BoolToVis}}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,16">
+                    <ui:SymbolIcon Symbol="PlugDisconnected24" FontSize="48" HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    <ui:TextBlock FontTypography="Subtitle" Text="没有检测到设备" HorizontalAlignment="Center" Margin="0,16,0,6" />
+                    <ui:TextBlock Text="插入支持的接收器后会自动出现" HorizontalAlignment="Center"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <ui:TextBlock FontTypography="Caption" Text="{Binding SupportedText}" HorizontalAlignment="Center" TextWrapping="Wrap"
+                                  TextAlignment="Center" Margin="0,20,0,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                </StackPanel>
+            </Border>
+            <ui:ProgressRing Grid.Row="1" Margin="0,0,0,64" IsIndeterminate="True" VerticalAlignment="Center"
+                             Visibility="{Binding Loading, Converter={StaticResource BoolToVis}}" />
+            </Grid>
         </ScrollViewer>
     </Grid>
 </UserControl>

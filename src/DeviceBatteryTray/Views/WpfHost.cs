@@ -27,38 +27,46 @@ public static class WpfHost
             Log.W("WPF 界面异常: " + e.Exception);
             e.Handled = true;
         };
-        _app.Resources.MergedDictionaries.Add(new ThemesDictionary { Theme = CurrentTheme });
+        _app.Resources.MergedDictionaries.Add(_themeDict = new ThemesDictionary { Theme = CurrentTheme });
+        _appliedDark = Theme.Dark;
         _app.Resources.MergedDictionaries.Add(new ControlsDictionary());
         // 本程序的统一控件样式（圆角等），要放在 WPF-UI 之后才能 BasedOn 它的默认样式
         _app.Resources.MergedDictionaries.Add(new System.Windows.ResourceDictionary
         {
             Source = new Uri("pack://application:,,,/DeviceBatteryTray;component/Views/Styles.xaml"),
         });
+        Accent.Apply(_appliedDark);
     }
 
-    static ApplicationTheme CurrentTheme => Theme.Current.Dark ? ApplicationTheme.Dark : ApplicationTheme.Light;
+    static ApplicationTheme CurrentTheme => Theme.Dark ? ApplicationTheme.Dark : ApplicationTheme.Light;
 
-    /// <summary>Win11 用 Mica 背景，Win10 不支持就用纯色。</summary>
-    public static WindowBackdropType Backdrop =>
-        Environment.OSVersion.Version.Build >= 22000 ? WindowBackdropType.Mica : WindowBackdropType.None;
+    static System.Windows.ResourceDictionary? _themeDict;
+    static bool _appliedDark;
 
-    /// <summary>按主题设置（见 Ui.ThemeMode）应用深浅色；还没手动切换过时跟随 Windows，系统切换会触发 UserPreferenceChanged。</summary>
+    /// <summary>
+    /// 按主题设置切换深浅色（设置变化后调用，没有变化时什么都不做）。
+    /// 只替换颜色资源。不用 ApplicationThemeManager.Apply：它还会重设主窗口的背景和背景效果，切换时窗口会闪一下。
+    /// </summary>
     public static void ApplyTheme()
     {
-        if (_app == null) return;
-        ApplicationThemeManager.Apply(CurrentTheme, Backdrop, updateAccent: true);
+        if (_app == null || _themeDict == null || Theme.Dark == _appliedDark) return;
+        _appliedDark = Theme.Dark;
+        // 先设强调色再换主题字典：新字典里的按钮、开关等画刷在替换时创建，取的是当时的强调色，之后不再跟着变
+        Accent.Apply(_appliedDark);
+        var dicts = _app.Resources.MergedDictionaries;
+        int i = dicts.IndexOf(_themeDict);
+        _themeDict = new ThemesDictionary { Theme = CurrentTheme };
+        if (i >= 0) dicts[i] = _themeDict; else dicts.Insert(0, _themeDict);
     }
 
     /// <summary>
-    /// 把窗口渲染成 PNG，供 --demo-ui 预览用。透明窗口（Win10 的主页面、弹出面板）渲染整个窗口，含圆角和阴影，和屏幕上看到的一致。
+    /// 把窗口渲染成 PNG，供 --demo-ui 预览用。透明窗口（Win10 的主页面、弹出面板）含圆角和阴影，和屏幕上看到的一致。
     /// transparent（README 截图）：透明背景；普通窗口（Win11）补上 8px 圆角。否则透明窗口垫一层灰色模拟桌面。
     /// </summary>
     public static void SaveSnapshot(System.Windows.Window w, string file, bool transparent = false)
     {
-        // 透明窗口画整个窗口（包括模板里的背景），否则只画内容并补上主题背景
-        System.Windows.Media.Visual visual = w.AllowsTransparency ? w : w.Content as System.Windows.FrameworkElement ?? (System.Windows.Media.Visual)w;
-        var size = w.AllowsTransparency ? new System.Windows.Size(w.ActualWidth, w.ActualHeight)
-            : ((System.Windows.FrameworkElement)visual).RenderSize;
+        System.Windows.Media.Visual visual = w;
+        var size = new System.Windows.Size(w.ActualWidth, w.ActualHeight);
         var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(w);
         var rect = new System.Windows.Rect(size);
         var dv = new System.Windows.Media.DrawingVisual();
@@ -70,7 +78,7 @@ public static class WpfHost
                 dc.DrawRectangle(w.AllowsTransparency ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x5A, 0x6A, 0x7A)) : appBg, null, rect);
             else if (clip)
             {
-                dc.PushClip(new System.Windows.Media.RectangleGeometry(rect, 8, 8));
+                dc.PushClip(new System.Windows.Media.RectangleGeometry(rect, ChromeWindow.Radius, ChromeWindow.Radius));
                 dc.DrawRectangle(appBg, null, rect);
             }
             // 固定视口，避免 VisualBrush 按内容边界拉伸
