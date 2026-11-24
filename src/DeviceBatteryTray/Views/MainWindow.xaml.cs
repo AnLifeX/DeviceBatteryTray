@@ -28,6 +28,14 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         InitializeComponent();
 
         WindowBackdropType = WpfHost.Backdrop;
+        Corners.RoundWindow(this, 8); // Win10 没有系统窗口圆角
+        if (Corners.NeedsWindowRegion)
+        {
+            void Edge() => WindowEdge.Visibility = WindowState == System.Windows.WindowState.Maximized
+                ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+            Edge();
+            StateChanged += (_, _) => Edge();
+        }
         TitleIcon.Source = AppIconSource;
         Icon = TitleIcon.Source;
 

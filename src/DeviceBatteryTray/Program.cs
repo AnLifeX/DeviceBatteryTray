@@ -112,7 +112,7 @@ public static class Program
         Application.ThreadException += (_, e) => Log.W("UI 线程异常: " + e.Exception);
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Log.W("未处理异常: " + e.ExceptionObject);
 
-        Application.Run(new TrayApp(CreateProviders(), showMain: !background, justUpdated: args.Contains("--updated"), demo: args.Contains("--demo")));
+        Application.Run(new TrayApp(CreateProviders(), showMain: !background, demo: args.Contains("--demo")));
     }
 
     /// <summary>卸载前（此时程序已被 Velopack 结束）：还原任务栏，删除开机自启项和设置 / 日志。</summary>

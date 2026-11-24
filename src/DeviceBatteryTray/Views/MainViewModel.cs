@@ -254,11 +254,26 @@ public sealed class MainViewModel : Observable
     public string SupportedText { get; private set; } = "";
     public string UpdatedText => _m.Refreshing ? "正在刷新…" : _m.UpdatedAt is { } at ? $"{at:HH:mm:ss} 更新" : "正在读取…";
 
-    public bool UpdateBannerOpen => _m.Update.Status is UpdateStatus.Available or UpdateStatus.Downloading;
-    public string UpdateBannerTitle => $"发现新版本 v{_m.Update.Info?.Version}";
-    public string UpdateBannerMessage => _m.Update.Status == UpdateStatus.Downloading
-        ? $"正在下载… {_m.Update.Progress}%" : "更新后程序会自动重启";
-    public bool CanApplyUpdate => _m.Update.Status == UpdateStatus.Available;
+    /// <summary>新版本横幅：发现新版本 / 下载中 / 下载失败（可重试）。只检查失败（没有新版本信息）时不显示。</summary>
+    public bool UpdateBannerOpen => _m.Update.Status is UpdateStatus.Available or UpdateStatus.Downloading || UpdateDownloadFailed;
+    public bool UpdateDownloadFailed => _m.Update is { Status: UpdateStatus.Failed, Info: not null };
+    public string UpdateBannerTitle => UpdateDownloadFailed
+        ? $"新版本 v{_m.Update.Info?.Version} 下载失败" : $"发现新版本 v{_m.Update.Info?.Version}";
+    public string UpdateBannerMessage => _m.Update.Status switch
+    {
+        UpdateStatus.Downloading => $"正在下载… {_m.Update.Progress}%",
+        UpdateStatus.Failed => _m.Update.Error ?? "",
+        _ => "更新后程序会自动重启",
+    };
+    public bool CanApplyUpdate => _m.Update.Status == UpdateStatus.Available || UpdateDownloadFailed;
+    public string ApplyUpdateText => UpdateDownloadFailed ? "重试" : "立即更新";
+    public Wpf.Ui.Controls.SymbolRegular UpdateBannerSymbol => UpdateDownloadFailed
+        ? Wpf.Ui.Controls.SymbolRegular.ErrorCircle24 : Wpf.Ui.Controls.SymbolRegular.ArrowDownload24;
+    public bool UpdateDownloading => _m.Update.Status == UpdateStatus.Downloading;
+    /// <summary>弹出面板的一行提示：下载中显示进度。</summary>
+    public string FlyoutUpdateText => UpdateDownloading
+        ? $"正在下载 v{_m.Update.Info?.Version}… {_m.Update.Progress}%" : UpdateBannerTitle;
+    public int UpdateProgress => _m.Update.Progress;
 
     // ----- 设置页 -----
 

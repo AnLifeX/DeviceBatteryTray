@@ -76,7 +76,7 @@ public static class Updater
     /// </summary>
     public static void ApplyAndRestart(AppUpdate u, bool showMain)
     {
-        var args = new List<string> { "--updated" };
+        var args = new List<string>();
         if (!showMain) args.Insert(0, AutoStart.BackgroundArg);
         // silent: false：替换文件时显示和安装时同样的启动画面 + 进度条
         Mgr.WaitExitThenApplyUpdates(u.Info.TargetFullRelease, silent: false, restart: true, args.ToArray());

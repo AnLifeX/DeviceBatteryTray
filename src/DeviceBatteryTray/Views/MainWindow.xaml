@@ -59,5 +59,9 @@
                 </Grid>
             </Border>
         </Grid>
+
+        <!-- Win10：窗口被裁成圆角后系统边框没了，自己画一圈圆角细边（Win11 / 最大化时隐藏） -->
+        <Border x:Name="WindowEdge" Grid.RowSpan="2" CornerRadius="8" BorderThickness="1" IsHitTestVisible="False" Visibility="Collapsed"
+                BorderBrush="{DynamicResource SurfaceStrokeColorFlyoutBrush}" />
     </Grid>
 </ui:FluentWindow>

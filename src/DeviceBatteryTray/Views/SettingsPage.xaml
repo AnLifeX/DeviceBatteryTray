@@ -125,7 +125,7 @@
                     <ui:CardControl.Header>
                         <StackPanel>
                             <ui:TextBlock Text="演示模式" />
-                            <ui:TextBlock FontTypography="Caption" Text="用模拟设备展示任务栏电量条、弹出面板和主页面（重启后自动关闭）" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <ui:TextBlock FontTypography="Caption" Text="用模拟设备展示任务栏电量条、弹出面板、主页面、低电量提醒和更新流程（重启后自动关闭）" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
                     </ui:CardControl.Header>
                     <ui:ToggleSwitch IsChecked="{Binding Demo}" OnContent="开" OffContent="关" />

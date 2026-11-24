@@ -29,6 +29,11 @@ public static class WpfHost
         };
         _app.Resources.MergedDictionaries.Add(new ThemesDictionary { Theme = CurrentTheme });
         _app.Resources.MergedDictionaries.Add(new ControlsDictionary());
+        // 本程序的统一控件样式（圆角等），要放在 WPF-UI 之后才能 BasedOn 它的默认样式
+        _app.Resources.MergedDictionaries.Add(new System.Windows.ResourceDictionary
+        {
+            Source = new Uri("pack://application:,,,/DeviceBatteryTray;component/Views/Styles.xaml"),
+        });
     }
 
     static ApplicationTheme CurrentTheme => Theme.Current.Dark ? ApplicationTheme.Dark : ApplicationTheme.Light;

@@ -33,16 +33,23 @@ public sealed class TrayApp : ApplicationContext, IAppModel
     private bool? _autoStart;
     private int _updateHours = AppSettings.Current.UpdateCheckHours;
     private Action? _balloonClick;
+    private bool _notifying; // 有提醒正在显示：托盘图标要保持可见
 
     public event Action? Changed;
     public DateTime? UpdatedAt { get; private set; }
     public bool Refreshing { get; private set; }
-    public UpdateState Update { get; private set; } = UpdateState.Idle;
+    /// <summary>界面看到的更新状态：演示模式下是模拟的，真实的检查照常在后台进行、互不影响。</summary>
+    public UpdateState Update => _demo ? _demoUpdate : _update;
+    private UpdateState _update = UpdateState.Idle;
+    private UpdateState _demoUpdate = DemoUpdateAvailable;
     public bool Elevated { get; } = FlydigiVader.IsElevated();
 
     public IReadOnlyList<DeviceStatus> Devices => DeviceList.Build(_demo ? DemoData.Raw : _raw);
 
-    /// <summary>演示模式：用模拟设备代替真实读取，不弹低电量提醒；只在内存里，重启后关闭。</summary>
+    /// <summary>
+    /// 演示模式：用模拟设备代替真实读取，低电量提醒照常弹（方便看样子），并模拟「发现新版本 → 下载」；
+    /// 只在内存里，重启后关闭。
+    /// </summary>
     public bool Demo
     {
         get => _demo;
@@ -51,6 +58,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
             if (_demo == value) return;
             _demo = value;
             Log.W("演示模式：" + (value ? "开" : "关"));
+            _demoUpdate = DemoUpdateAvailable;
             _lowNotified.Clear();
             RefreshWidget();
             RaiseChanged();
@@ -58,7 +66,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         }
     }
 
-    public TrayApp(List<BatteryProvider> providers, bool showMain, bool justUpdated, bool demo = false)
+    public TrayApp(List<BatteryProvider> providers, bool showMain, bool demo = false)
     {
         _demo = demo;
         _providers = providers;
@@ -66,8 +74,8 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         _ui = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
         _app = new NotifyIcon { Text = "设备电量", Icon = AppIcon.Sized(SystemInformation.SmallIconSize.Width), Visible = false };
         _app.MouseUp += (_, _) => ToggleFlyout();
-        _app.BalloonTipClicked += (_, _) => { var a = _balloonClick; _balloonClick = null; a?.Invoke(); };
-        _app.BalloonTipClosed += (_, _) => _balloonClick = null;
+        _app.BalloonTipClicked += (_, _) => { var a = _balloonClick; _balloonClick = null; OnBalloonDone(); a?.Invoke(); };
+        _app.BalloonTipClosed += (_, _) => { _balloonClick = null; OnBalloonDone(); };
         _widget.Clicked += _ => ToggleFlyout();
         SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged; // 深浅色 / 强调色切换
         SystemEvents.SessionEnding += (_, _) => _widget.Detach();      // 注销/关机前还原任务栏
@@ -89,7 +97,6 @@ public sealed class TrayApp : ApplicationContext, IAppModel
             FirstUpdateCheck, TimeSpan.FromHours(_updateHours));
 
         if (showMain) _ui.Post(_ => ShowMain(MainPage.Home), null);
-        if (justUpdated) _ui.Post(_ => Notify("已更新", $"设备电量已更新到 v{Updater.CurrentText}", ToolTipIcon.Info), null);
     }
 
     static EventWaitHandle CreateSharedEvent(string name)
@@ -119,7 +126,8 @@ public sealed class TrayApp : ApplicationContext, IAppModel
             var period = TimeSpan.FromHours(_updateHours);
             _updateTimer.Change(period, period);
         }
-        _lowNotified.Clear();
+        // 不清空已提醒记录：否则切主题、改名等任何设置变化都会把低电量再提醒一遍。
+        // 改了阈值也不用清：RefreshWidget 会把高于新阈值的移出记录，新跌破的照常提醒。
         RefreshWidget();
         RaiseChanged();
     }
@@ -186,7 +194,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         bool widgetShown = _widget.Update(online.Select(d => new TaskbarWidget.Item(d.Kind, d.Name, d.Reading!)).ToList());
 
         // 内嵌条显示不了（竖向任务栏 / 没有在线设备）时，用程序托盘图标兜底，保证随时能打开面板
-        _app.Visible = !widgetShown;
+        _app.Visible = !widgetShown || _notifying;
         _app.Text = Truncate(online.Count == 0 ? "设备电量：没有在线设备"
             : string.Join("\n", online.Select(d => $"{d.Name} {d.Reading!.Percent}%")));
 
@@ -195,9 +203,9 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         foreach (var d in online)
         {
             var r = d.Reading!;
-            if (threshold > 0 && !_demo && !r.Charging && r.Percent <= threshold)
+            if (threshold > 0 && !r.Charging && r.Percent <= threshold)
             {
-                if (_lowNotified.Add(d.Id)) Notify("电量低", $"{d.Name} 只剩 {r.Percent}%", ToolTipIcon.Warning);
+                if (_lowNotified.Add(d.Id)) Notify("电量低", $"{d.Name} 只剩 {r.Percent}%", ToolTipIcon.Warning, () => ShowMain(MainPage.Home));
             }
             else _lowNotified.Remove(d.Id);
         }
@@ -264,14 +272,26 @@ public sealed class TrayApp : ApplicationContext, IAppModel
 
     // ---------- 更新 ----------
 
-    private void SetUpdate(UpdateState s) { Update = s; RaiseChanged(); }
+    private void SetUpdate(UpdateState s) { _update = s; RaiseChanged(); }
 
-    public void CheckUpdate() => CheckUpdate(manual: true);
+    /// <summary>界面上的「检查更新」：演示模式下走模拟流程。</summary>
+    public void CheckUpdate()
+    {
+        if (_demo) DemoCheckUpdate();
+        else CheckUpdate(manual: true);
+    }
+
+    /// <summary>界面上的「立即更新」：演示模式下走模拟流程。</summary>
+    public void InstallUpdate()
+    {
+        if (_demo) DemoInstallUpdate();
+        else InstallRealUpdate();
+    }
 
     private async void CheckUpdate(bool manual)
     {
         if (!manual && (!AppSettings.Current.AutoUpdate || !Updater.CanSelfUpdate)) return; // 开发版本不自动检查
-        if (Update.Status is UpdateStatus.Checking or UpdateStatus.Downloading) return;
+        if (_update.Status is UpdateStatus.Checking or UpdateStatus.Downloading) return;
         SetUpdate(new UpdateState(UpdateStatus.Checking));
         try
         {
@@ -281,7 +301,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
             SetUpdate(new UpdateState(UpdateStatus.Available, info));
             if (manual) return;
 
-            InstallUpdate(); // 自动更新：下载后替换并重启
+            InstallRealUpdate(); // 自动更新：下载后替换并重启
         }
         catch (Exception e)
         {
@@ -290,9 +310,10 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         }
     }
 
-    public async void InstallUpdate()
+    private async void InstallRealUpdate()
     {
-        if (Update is not { Status: UpdateStatus.Available, Info: { } info }) return;
+        // 下载失败后可以直接重试（横幅上的「重试」）
+        if (_update is not { Status: UpdateStatus.Available or UpdateStatus.Failed, Info: { } info }) return;
         SetUpdate(new UpdateState(UpdateStatus.Downloading, info));
         try
         {
@@ -303,28 +324,72 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         }
         catch (Exception e)
         {
+            // 不弹通知：失败原因和「重试」显示在主页面的更新横幅里，后台自动更新下次检查时也会再试
             Log.W("更新失败: " + e);
             SetUpdate(new UpdateState(UpdateStatus.Failed, info, Error: e.Message));
-            Notify("更新失败", e.Message, ToolTipIcon.Error, () => ShowMain(MainPage.Settings));
         }
+    }
+
+    // ---------- 演示模式的更新（不联网、不替换程序） ----------
+
+    /// <summary>演示用的「新版本」：当前版本的下一个小版本。</summary>
+    static UpdateState DemoUpdateAvailable
+    {
+        get
+        {
+            var v = Version.TryParse(Updater.CurrentText, out var cur) ? cur : new Version(0, 1, 0);
+            // AppUpdate.Info 只在真实下载 / 替换时用到，演示流程不会走到那里
+            return new UpdateState(UpdateStatus.Available, new AppUpdate(new Version(v.Major, v.Minor + 1, 0), null!));
+        }
+    }
+
+    private void SetDemoUpdate(UpdateState s) { _demoUpdate = s; RaiseChanged(); }
+
+    private async void DemoCheckUpdate()
+    {
+        if (_demoUpdate.Status is UpdateStatus.Checking or UpdateStatus.Downloading) return;
+        SetDemoUpdate(new UpdateState(UpdateStatus.Checking));
+        await Task.Delay(800);
+        if (_demo) SetDemoUpdate(DemoUpdateAvailable);
+    }
+
+    /// <summary>
+    /// 模拟下载：第一次下到一半「失败」，展示失败样式和「重试」；重试会走完进度（约 3 秒），
+    /// 然后回到「发现新版本」（真实流程这时会退出，由更新程序显示进度画面、替换文件并重启）。
+    /// </summary>
+    private async void DemoInstallUpdate()
+    {
+        if (_demoUpdate is not { Status: UpdateStatus.Available or UpdateStatus.Failed, Info: { } info }) return;
+        bool fail = _demoUpdate.Status == UpdateStatus.Available;
+        for (int p = 0; p <= 100; p += 4)
+        {
+            if (!_demo) return; // 中途退出了演示模式
+            if (fail && p >= 60) { SetDemoUpdate(new UpdateState(UpdateStatus.Failed, info, Error: "网络连接中断（演示）")); return; }
+            SetDemoUpdate(new UpdateState(UpdateStatus.Downloading, info, p));
+            await Task.Delay(120);
+        }
+        if (_demo) SetDemoUpdate(DemoUpdateAvailable);
     }
 
     // ---------- 通知 ----------
 
-    /// <summary>气泡提醒要挂在一个可见的托盘图标上；程序图标平时隐藏，提醒时临时显示。</summary>
+    /// <summary>
+    /// 气泡提醒要挂在一个可见的托盘图标上；程序图标平时隐藏，提醒时临时显示，直到提醒关闭。
+    /// 期间 RefreshWidget 不能把图标藏掉：图标一删，系统会把它的提醒立刻撤掉（之前提醒一闪就没的原因）。
+    /// </summary>
     private void Notify(string title, string text, ToolTipIcon icon, Action? onClick = null)
     {
         _balloonClick = onClick;
-        bool wasHidden = !_app.Visible;
+        _notifying = true;
         _app.Visible = true;
         _app.ShowBalloonTip(5000, title, text, icon);
-        if (!wasHidden) return;
-        void Hide(object? s, EventArgs e)
-        {
-            _app.BalloonTipClosed -= Hide; _app.BalloonTipClicked -= Hide;
-            RefreshWidget();
-        }
-        _app.BalloonTipClosed += Hide; _app.BalloonTipClicked += Hide;
+    }
+
+    private void OnBalloonDone()
+    {
+        if (!_notifying) return;
+        _notifying = false;
+        RefreshWidget(); // 内嵌条正常显示的话，托盘图标恢复隐藏
     }
 
     static string Truncate(string s) => s.Length <= 127 ? s : s[..127]; // NotifyIcon.Text 上限

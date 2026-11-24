@@ -90,7 +90,7 @@
     </Window.Resources>
 
     <!-- 四周 16px 留给阴影 -->
-    <Border x:Name="Card" Margin="16" CornerRadius="8" BorderThickness="1"
+    <Border x:Name="Card" Margin="16" CornerRadius="12" BorderThickness="1"
             Background="{DynamicResource ApplicationBackgroundBrush}"
             BorderBrush="{DynamicResource SurfaceStrokeColorFlyoutBrush}">
         <Border.Effect>
@@ -155,7 +155,7 @@
                 <Grid>
                     <StackPanel Orientation="Horizontal">
                         <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="16" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
-                        <ui:TextBlock Text="{Binding UpdateBannerTitle}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                        <ui:TextBlock Text="{Binding FlyoutUpdateText}" Margin="10,0,0,0" VerticalAlignment="Center" />
                     </StackPanel>
                     <ui:TextBlock Text="查看" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
                 </Grid>
@@ -213,7 +213,7 @@
             </StackPanel>
 
             <!-- 底栏 -->
-            <Border Grid.Row="3" CornerRadius="0,0,8,8" Padding="8,6" BorderThickness="0,1,0,0"
+            <Border Grid.Row="3" CornerRadius="0,0,11,11" Padding="8,6" BorderThickness="0,1,0,0"
                     Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
                     BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
                 <Grid>

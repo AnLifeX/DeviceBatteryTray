@@ -107,7 +107,7 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="0,0,14,24">
                 <!-- 演示模式提示 -->
-                <Border Visibility="{Binding Demo, Converter={StaticResource BoolToVis}}" CornerRadius="8" Padding="16,12" Margin="0,0,0,12"
+                <Border Visibility="{Binding Demo, Converter={StaticResource BoolToVis}}" CornerRadius="12" Padding="16,12" Margin="0,0,0,12"
                         Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{DynamicResource AccentFillColorDefaultBrush}" BorderThickness="1">
                     <Grid>
@@ -119,14 +119,14 @@
                         <ui:SymbolIcon Symbol="Info24" FontSize="20" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
                         <StackPanel Grid.Column="1" Margin="14,0" VerticalAlignment="Center">
                             <ui:TextBlock FontTypography="BodyStrong" Text="演示模式" />
-                            <ui:TextBlock FontTypography="Caption" Text="显示的是模拟设备，任务栏电量条和弹出面板也一样；不会弹低电量提醒" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <ui:TextBlock FontTypography="Caption" Text="显示的是模拟设备；低电量提醒照常弹出，「立即更新」只模拟下载、不会真的更新" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
                         <ui:Button Grid.Column="2" Content="退出演示" Command="{Binding ExitDemoCommand}" />
                     </Grid>
                 </Border>
 
                 <!-- 新版本提示 -->
-                <Border Visibility="{Binding UpdateBannerOpen, Converter={StaticResource BoolToVis}}" CornerRadius="8" Padding="16,12" Margin="0,0,0,12"
+                <Border Visibility="{Binding UpdateBannerOpen, Converter={StaticResource BoolToVis}}" CornerRadius="12" Padding="16,12" Margin="0,0,0,12"
                         Background="{DynamicResource InfoBarInformationalSeverityBackgroundBrush}"
                         BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                     <Grid>
@@ -135,12 +135,15 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="20" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                        <ui:SymbolIcon Symbol="{Binding UpdateBannerSymbol}" FontSize="20" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
                         <StackPanel Grid.Column="1" Margin="14,0" VerticalAlignment="Center">
                             <ui:TextBlock FontTypography="BodyStrong" Text="{Binding UpdateBannerTitle}" />
                             <ui:TextBlock FontTypography="Caption" Text="{Binding UpdateBannerMessage}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <!-- 下载中：进度条（百分比也写在上面的文字里） -->
+                            <ProgressBar Value="{Binding UpdateProgress, Mode=OneWay}" Maximum="100" Margin="0,8,0,2"
+                                         Visibility="{Binding UpdateDownloading, Converter={StaticResource BoolToVis}}" />
                         </StackPanel>
-                        <ui:Button Grid.Column="2" Content="立即更新" Appearance="Primary" Command="{Binding ApplyUpdateCommand}"
+                        <ui:Button Grid.Column="2" Content="{Binding ApplyUpdateText}" Appearance="Primary" Command="{Binding ApplyUpdateCommand}"
                                    Visibility="{Binding CanApplyUpdate, Converter={StaticResource BoolToVis}}" />
                     </Grid>
                 </Border>
@@ -218,7 +221,7 @@
                 </ItemsControl>
 
                 <!-- 空状态 -->
-                <Border Visibility="{Binding NoDevices, Converter={StaticResource BoolToVis}}" CornerRadius="8" Padding="24,40"
+                <Border Visibility="{Binding NoDevices, Converter={StaticResource BoolToVis}}" CornerRadius="12" Padding="24,40"
                         Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                     <StackPanel HorizontalAlignment="Center">
