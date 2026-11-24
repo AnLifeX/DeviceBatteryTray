@@ -60,20 +60,36 @@ git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
+## 开发模式
+
+修改代码或 XAML 后自动重新编译并重新打开窗口，不需要安装：
+
+```powershell
+pwsh build/dev.ps1                    # 主页面（演示数据）
+pwsh build/dev.ps1 settings dark      # 设置页，深色
+pwsh build/dev.ps1 empty              # 没有设备时的主页面
+pwsh build/dev.ps1 welcome -Setup     # 安装程序的页面
+```
+
+基于 `dotnet watch`，每次修改都重新启动窗口（几秒）。主程序用 `--demo-ui` 打开：不读取设备、不嵌入任务栏、不写入 settings.json，
+与已安装的版本互不影响。它和普通的 Debug 编译共用输出目录，两者不要同时进行。
+
 ## 本地测试工具
 
 只在 Debug 编译里有，发布的 Release 版本没有这些入口：
 
 - **演示模式**：设置 →「其他」里打开，或用 `--demo` 启动。用模拟设备展示任务栏电量条、弹出面板和主页面，不读取真实设备；
   低电量提醒照常弹出，「立即更新」会模拟下载（第一次模拟失败，用来展示重试）；重启后自动关闭。
-- `--demo-ui [home|settings|flyout|strip] [light|dark] [out.png] [--clean]`：用演示数据打开主页面 / 弹出面板；
-  给出 png 路径时渲染成图片后退出。`--clean` 用于生成 README 截图（`docs/images/`）：
+- `--demo-ui [home|settings|about|empty|flyout|strip] [light|dark|system] [out.png] [--clean]`：用演示数据打开主页面 / 弹出面板；
+  `empty` 为没有设备时的主页面，`system` 使用设置里的主题；给出 png 路径时渲染成图片后退出。设置只在内存里修改，不写入 settings.json。`--clean` 用于生成 README 截图（`docs/images/`）：
   ```
   --demo-ui home light docs/images/main-light.png --clean
   --demo-ui flyout dark docs/images/flyout-dark.png --clean
   --demo-ui strip dark docs/images/taskbar.png --clean
   ```
-- 安装程序 `Setup.exe --preview <页面> <out.png>`：把安装程序的某个页面渲染成图片，不执行任何安装操作。页面：
+- 环境变量 `DEVICEBATTERYTRAY_CHROME=system`：在 Win10 上让主程序和安装程序的窗口按 Win11 的方式创建（普通窗口，圆角和阴影交给系统），
+  用来检查命中测试和最大化。窗口外框见 `src/DeviceBatteryTray/Views/ChromeWindow.cs`。
+- 安装程序 `Setup.exe --preview <页面> [out.png]`：显示安装程序的某个页面，不执行任何安装操作；给出 png 路径时渲染成图片后退出。页面：
   `welcome` `location` `options` `progress` `error` `done` `confirm` `uninstall-done` `update` `update-error`。
 
 ## 程序图标
@@ -93,11 +109,11 @@ dotnet run --project tools/IconGen -- --candidates candidates.png   # 所有方�
   - `Hid/` HID 枚举与请求 / 应答
   - `Devices/` 各设备的电量读取
   - `Tray/` 任务栏内嵌条、主逻辑
-  - `Views/` 主页面和弹出面板（WPF：窗口、设备页、设置页、ViewModel、样式）
+  - `Views/` 主页面和弹出面板（WPF：窗口外框、设备页、设置页、ViewModel、样式、主色）
   - `Ui/` 主题（深浅色）、设备列表、演示数据、程序图标
   - `AppSettings.cs` 设置，`AutoStart.cs` 开机自启，`Updater.cs` 自动更新
 - `src/Setup/` 安装程序（.NET Framework 4.8）：安装 / 卸载向导、自动更新
-- `build/package.ps1` 打包脚本（本地和 CI 共用）
+- `build/package.ps1` 打包脚本（本地和 CI 共用），`build/dev.ps1` 开发模式
 - `tools/HidProbe/` HID 调试工具：列接口（含 Report ID）、发包、被动监听、读 Feature
 - `tools/GameSirProbe/` 32 位，调用盖世小鸡 SDK 并截获它的 HID 收发
 - `tools/FlydigiProbe/` 经飞智过滤驱动查询黑武士（需管理员权限）

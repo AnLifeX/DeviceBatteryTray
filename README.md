@@ -5,10 +5,10 @@
 # 设备电量
 
 在 Windows 任务栏上直接显示无线键盘、鼠标、手柄的电量<br>
-不用安装、也不用打开各家的驱动软件
+不用打开各家的驱动软件
 
 [![最新版本](https://img.shields.io/github/v/release/AnLifeX/DeviceBatteryTray?label=%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC&color=2DD4BF)](https://github.com/AnLifeX/DeviceBatteryTray/releases/latest)
-[![Windows 10](https://img.shields.io/badge/Windows-10-0078D4?logo=windows&logoColor=white)](#系统要求)
+[![Windows 10 | 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white)](#系统要求)
 [![.NET 8](https://img.shields.io/badge/.NET-8-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/download/dotnet/8.0)
 [![MIT 许可证](https://img.shields.io/badge/%E8%AE%B8%E5%8F%AF%E8%AF%81-MIT-22C55E)](LICENSE)
 
@@ -26,7 +26,7 @@
 - 🪟 **弹出面板**：点一下电量条，就能看到所有设备的电量和充电状态。
 - 🔔 **低电量提醒**：电量低于设定值时弹出系统通知，同一次低电量只提醒一次。
 - 🎛️ **同型号多台**：插了好几个同型号的接收器也能分别显示；可以给每台设备改名，也可以隐藏不想看的设备。
-- 🌗 **深浅色**：跟随系统，也可以在主页面一键切换。
+- 🌗 **深浅色**：首次运行时与系统一致，之后在主页面一键切换。
 - ⬆️ **自动更新**：在后台检查并下载新版本，替换后自动重启。
 
 <div align="center">
@@ -69,9 +69,8 @@
 
 ### 系统要求
 
-- Windows 10，任务栏横向放置（在屏幕底部或顶部）
+- Windows 10 / 11，任务栏横向放置（在屏幕底部或顶部）
 - 任务栏竖着放时，会改为在托盘区显示程序图标，点它同样能打开弹出面板
-- Windows 11 尚未测试
 
 ## 使用说明
 
@@ -92,11 +91,11 @@
 
 | 选项 | 默认 | 说明 |
 |---|---|---|
-| 开机自启 | 关 | 登录 Windows 后在后台启动 |
+| 开机自启 | 安装时选择 | 登录 Windows 后在后台启动；安装向导中默认勾选，便携版默认关闭 |
 | 刷新间隔 | 30 秒 | 多久读取一次电量，可设 5 ~ 3600 秒 |
 | 低电量提醒 | 低于 20% | 可选 10% ~ 30% 或关闭；充电中、已隐藏的设备不提醒 |
 | 读取飞智黑武士 | 开 | 需要管理员权限，见下方说明 |
-| 自动更新 | 开 | 检查间隔可选 1 小时 ~ 每周，默认 6 小时 |
+| 自动更新 | 开 | 启动后和之后每小时检查一次 |
 
 ### 飞智黑武士与管理员权限
 
