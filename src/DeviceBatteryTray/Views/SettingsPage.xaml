@@ -121,6 +121,15 @@
             </ui:CardControl>
 
             <ui:TextBlock Style="{StaticResource Section}" Text="关于" />
+            <ui:CardControl Icon="{ui:SymbolIcon Games24}">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="演示模式" />
+                        <ui:TextBlock FontTypography="Caption" Text="用模拟设备展示任务栏电量条、弹出面板和主页面（重启后自动关闭）" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:ToggleSwitch IsChecked="{Binding Demo}" OnContent="开" OffContent="关" />
+            </ui:CardControl>
             <ui:CardAction Icon="{ui:SymbolIcon Document24}" Command="{Binding OpenLogCommand}">
                 <StackPanel>
                     <ui:TextBlock Text="运行日志" />

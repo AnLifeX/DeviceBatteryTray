@@ -84,6 +84,25 @@
                 </StackPanel>
             </Grid>
 
+            <!-- 演示模式提示 -->
+            <Border Visibility="{Binding Demo, Converter={StaticResource BoolToVis}}" CornerRadius="8" Padding="16,12" Margin="0,0,0,12"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource AccentFillColorDefaultBrush}" BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:SymbolIcon Symbol="Info24" FontSize="20" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Margin="14,0" VerticalAlignment="Center">
+                        <ui:TextBlock FontTypography="BodyStrong" Text="演示模式" />
+                        <ui:TextBlock FontTypography="Caption" Text="显示的是模拟设备，任务栏电量条和弹出面板也一样；不会弹低电量提醒" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                    <ui:Button Grid.Column="2" Content="退出演示" Command="{Binding ExitDemoCommand}" />
+                </Grid>
+            </Border>
+
             <!-- 新版本提示 -->
             <Border Visibility="{Binding UpdateBannerOpen, Converter={StaticResource BoolToVis}}" CornerRadius="8" Padding="16,12" Margin="0,0,0,12"
                     Background="{DynamicResource InfoBarInformationalSeverityBackgroundBrush}"

@@ -53,7 +53,9 @@ public static class WpfHost
         var dv = new System.Windows.Media.DrawingVisual();
         using (var dc = dv.RenderOpen())
         {
-            var bg = (System.Windows.Media.Brush?)w.TryFindResource("ApplicationBackgroundBrush") ?? System.Windows.Media.Brushes.White;
+            // 透明窗口（弹出面板）垫一层灰色，模拟桌面背景，阴影才看得出来
+            var bg = w.AllowsTransparency ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x5A, 0x6A, 0x7A))
+                : (System.Windows.Media.Brush?)w.TryFindResource("ApplicationBackgroundBrush") ?? System.Windows.Media.Brushes.White;
             var rect = new System.Windows.Rect(0, 0, root.ActualWidth, root.ActualHeight);
             dc.DrawRectangle(bg, null, rect);
             dc.DrawRectangle(new System.Windows.Media.VisualBrush(root), null, rect);

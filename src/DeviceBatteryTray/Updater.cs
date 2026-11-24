@@ -78,6 +78,7 @@ public static class Updater
     {
         var args = new List<string> { "--updated" };
         if (!showMain) args.Insert(0, AutoStart.BackgroundArg);
-        Mgr.WaitExitThenApplyUpdates(u.Info.TargetFullRelease, silent: true, restart: true, args.ToArray());
+        // silent: false：替换文件时显示和安装时同样的启动画面 + 进度条
+        Mgr.WaitExitThenApplyUpdates(u.Info.TargetFullRelease, silent: false, restart: true, args.ToArray());
     }
 }

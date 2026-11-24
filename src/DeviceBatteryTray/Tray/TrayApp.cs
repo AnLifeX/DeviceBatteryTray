@@ -24,7 +24,8 @@ public sealed class TrayApp : ApplicationContext, IAppModel
     private readonly SynchronizationContext _ui;
     private readonly System.Threading.Timer _timer, _updateTimer;
     private readonly EventWaitHandle _exitEvent, _showEvent;
-    private Flyout? _flyout;
+    private Views.FlyoutWindow? _flyout;
+    private bool _demo;
     private DateTime _flyoutClosedAt;
     private Views.MainWindow? _main;
     private int _polling;
@@ -38,11 +39,28 @@ public sealed class TrayApp : ApplicationContext, IAppModel
     public UpdateState Update { get; private set; } = UpdateState.Idle;
     public bool Elevated { get; } = FlydigiVader.IsElevated();
 
-    public IReadOnlyList<DeviceStatus> Devices =>
-        _providers.Select(p => new DeviceStatus(p.Id, p.Kind, p.DisplayName, _last.GetValueOrDefault(p.Id))).ToList();
+    public IReadOnlyList<DeviceStatus> Devices => _demo ? DemoData.Devices
+        : _providers.Select(p => new DeviceStatus(p.Id, p.Kind, p.DisplayName, _last.GetValueOrDefault(p.Id))).ToList();
 
-    public TrayApp(List<BatteryProvider> providers, bool showMain, bool justUpdated)
+    /// <summary>演示模式：用模拟设备代替真实读取，不弹低电量提醒；只在内存里，重启后关闭。</summary>
+    public bool Demo
     {
+        get => _demo;
+        set
+        {
+            if (_demo == value) return;
+            _demo = value;
+            Log.W("演示模式：" + (value ? "开" : "关"));
+            _lowNotified.Clear();
+            RefreshWidget();
+            RaiseChanged();
+            PollAsync();
+        }
+    }
+
+    public TrayApp(List<BatteryProvider> providers, bool showMain, bool justUpdated, bool demo = false)
+    {
+        _demo = demo;
         _providers = providers;
         _ui = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
         _app = new NotifyIcon { Text = "设备电量", Icon = AppIcon.Sized(SystemInformation.SmallIconSize.Width), Visible = false };
@@ -113,6 +131,20 @@ public sealed class TrayApp : ApplicationContext, IAppModel
     {
         if (Interlocked.Exchange(ref _polling, 1) == 1) return;
         _ui.Post(_ => { Refreshing = true; RaiseChanged(); }, null);
+        if (_demo)
+        {
+            // 演示模式：不碰真实设备，模拟一次读取（稍等一下，让刷新动画可见）
+            Task.Delay(400).ContinueWith(_ => _ui.Post(_ =>
+            {
+                DemoData.Tick();
+                UpdatedAt = DateTime.Now;
+                Refreshing = false;
+                Interlocked.Exchange(ref _polling, 0);
+                RefreshWidget();
+                RaiseChanged();
+            }, null));
+            return;
+        }
         Task.Run(() =>
         {
             try
@@ -156,7 +188,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         foreach (var d in online)
         {
             var r = d.Reading!;
-            if (threshold > 0 && !r.Charging && r.Percent <= threshold)
+            if (threshold > 0 && !_demo && !r.Charging && r.Percent <= threshold)
             {
                 if (_lowNotified.Add(d.Id)) Notify("电量低", $"{d.Name} 只剩 {r.Percent}%", ToolTipIcon.Warning);
             }
@@ -171,8 +203,9 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         // 点内嵌条时面板会先因失去焦点关闭，紧接着又收到点击：这种情况视为「关闭」，不再重开
         if (_flyout != null || (DateTime.Now - _flyoutClosedAt).TotalMilliseconds < 300) return;
 
-        _flyout = new Flyout(this);
-        _flyout.FormClosed += (_, _) => { _flyout?.Dispose(); _flyout = null; _flyoutClosedAt = DateTime.Now; };
+        Views.WpfHost.EnsureApp();
+        _flyout = new Views.FlyoutWindow(this);
+        _flyout.Closed += (_, _) => { _flyout = null; _flyoutClosedAt = DateTime.Now; };
         _flyout.ShowNear(Cursor.Position);
     }
 

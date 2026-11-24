@@ -20,6 +20,9 @@ public interface IAppModel
     bool AutoStart { get; set; }
     bool Elevated { get; }
 
+    /// <summary>演示模式：用模拟设备代替真实读取（不保存，重启后关闭）。</summary>
+    bool Demo { get; set; }
+
     /// <summary>状态变化，在 UI 线程触发。</summary>
     event Action? Changed;
 

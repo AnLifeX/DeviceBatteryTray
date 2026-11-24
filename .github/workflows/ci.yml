@@ -54,6 +54,7 @@ jobs:
           dotnet vpk pack -u DeviceBatteryTray -v ${{ steps.ver.outputs.version }} -p publish -o Releases
           -e DeviceBatteryTray.exe --packTitle "设备电量" --packAuthors AnLifeX
           -i src/DeviceBatteryTray/app.ico -f net8-x64-desktop
+          --splashImage src/DeviceBatteryTray/splash.png --splashProgressColor "#2DD4BF"
 
       - name: 创建草稿 Release
         run: >

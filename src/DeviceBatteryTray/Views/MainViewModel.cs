@@ -35,7 +35,7 @@ public enum BatteryLevel { Good, Caution, Critical, Charging, None }
 /// <summary>设备页的一张卡片。</summary>
 public sealed class DeviceItem : Observable
 {
-    private string _status = "", _percentText = "", _stateText = "";
+    private string _status = "", _percentText = "", _stateText = "", _note = "";
     private double _percent;
     private bool _online, _needsAdmin;
     private BatteryLevel _level;
@@ -55,6 +55,8 @@ public sealed class DeviceItem : Observable
     public string PercentText { get => _percentText; private set => Set(ref _percentText, value); }
     public string StateText { get => _stateText; private set => Set(ref _stateText, value); }
     public bool Online { get => _online; private set => Set(ref _online, value); }
+    /// <summary>百分比下面的小字：充电中 / 估算。</summary>
+    public string Note { get => _note; private set => Set(ref _note, value); }
     public bool NeedsAdmin { get => _needsAdmin; private set => Set(ref _needsAdmin, value); }
     public BatteryLevel Level { get => _level; private set => Set(ref _level, value); }
 
@@ -64,6 +66,7 @@ public sealed class DeviceItem : Observable
         NeedsAdmin = r.Detail == FlydigiVader.NeedAdminDetail;
         Percent = Online ? r.Percent : 0;
         PercentText = Online ? $"{r.Percent}%" : "";
+        Note = !Online ? "" : r.Charging ? "充电中" : r.Detail ?? "";
         StateText = Online || NeedsAdmin ? "" : r.State == ReadState.Offline ? "休眠" : "读取失败";
         Level = !Online ? BatteryLevel.None : r.Charging ? BatteryLevel.Charging
             : r.Percent <= 20 ? BatteryLevel.Critical : r.Percent <= 40 ? BatteryLevel.Caution : BatteryLevel.Good;
@@ -97,11 +100,18 @@ public sealed class MainViewModel : Observable
         OpenLogCommand = new RelayCommand(() => { if (File.Exists(Log.FilePath)) Process.Start("explorer.exe", $"/select,\"{Log.FilePath}\""); });
         OpenRepoCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo(Updater.RepoUrl) { UseShellExecute = true }));
         ShowSettingsCommand = new RelayCommand(() => NavigateRequested?.Invoke(MainPage.Settings));
+        OpenMainCommand = new RelayCommand(() => { CloseRequested?.Invoke(); _m.ShowMain(MainPage.Home); });
+        OpenSettingsCommand = new RelayCommand(() => { CloseRequested?.Invoke(); _m.ShowMain(MainPage.Settings); });
+        ExitCommand = new RelayCommand(() => { CloseRequested?.Invoke(); _m.Exit(); });
+        ExitDemoCommand = new RelayCommand(() => _m.Demo = false);
         BackCommand = new RelayCommand(() => NavigateRequested?.Invoke(MainPage.Home));
         Sync();
     }
 
     public ObservableCollection<DeviceItem> Devices { get; } = new();
+
+    /// <summary>弹出面板只显示在线（读到电量）的设备。</summary>
+    public ObservableCollection<DeviceItem> OnlineDevices { get; } = new();
 
     public ICommand RefreshCommand { get; }
     public ICommand UpdateActionCommand { get; }
@@ -110,6 +120,13 @@ public sealed class MainViewModel : Observable
     public ICommand OpenLogCommand { get; }
     public ICommand OpenRepoCommand { get; }
     public ICommand ShowSettingsCommand { get; }
+    public ICommand OpenMainCommand { get; }
+    public ICommand OpenSettingsCommand { get; }
+    public ICommand ExitCommand { get; }
+    public ICommand ExitDemoCommand { get; }
+
+    /// <summary>弹出面板里点了会打开主页面的操作，面板据此先关闭自己。</summary>
+    public event Action? CloseRequested;
     public ICommand BackCommand { get; }
 
     /// <summary>页面切换请求（由主窗口处理动画）。</summary>
@@ -120,21 +137,28 @@ public sealed class MainViewModel : Observable
     /// <summary>模型状态变化时调用（UI 线程）。</summary>
     public void Sync()
     {
-        // 只显示接收器在的设备；保留已有卡片对象，避免整列表重建闪烁
-        var shown = _m.Devices.Where(d => d.Reading is { State: not ReadState.NotFound }).ToList();
-        for (int i = Devices.Count - 1; i >= 0; i--)
-            if (shown.All(d => d.Id != Devices[i].Id)) Devices.RemoveAt(i);
-        for (int i = 0; i < shown.Count; i++)
-        {
-            var d = shown[i];
-            var item = Devices.FirstOrDefault(x => x.Id == d.Id);
-            if (item == null) Devices.Insert(Math.Min(i, Devices.Count), item = new DeviceItem(d.Id, d.Kind, d.Name));
-            item.Update(d.Reading!);
-        }
+        // 主页面：接收器在的设备；弹出面板：在线的设备
+        var all = _m.Devices;
+        SyncList(Devices, all.Where(d => d.Reading is { State: not ReadState.NotFound }).ToList());
+        SyncList(OnlineDevices, all.Where(d => d.Online).ToList());
         SupportedText = "支持：" + string.Join("、", _m.Devices.Select(d => d.Name));
         if (!_m.Refreshing && DateTime.Now >= _spinUntil) Spinning = false;
         else if (_m.Refreshing) Spinning = true;
         RaiseAll();
+    }
+
+    /// <summary>增量同步：保留已有卡片对象，避免整列表重建闪烁、重复播放进场动画。</summary>
+    static void SyncList(ObservableCollection<DeviceItem> list, List<DeviceStatus> shown)
+    {
+        for (int i = list.Count - 1; i >= 0; i--)
+            if (shown.All(d => d.Id != list[i].Id)) list.RemoveAt(i);
+        for (int i = 0; i < shown.Count; i++)
+        {
+            var d = shown[i];
+            var item = list.FirstOrDefault(x => x.Id == d.Id);
+            if (item == null) list.Insert(Math.Min(i, list.Count), item = new DeviceItem(d.Id, d.Kind, d.Name));
+            item.Update(d.Reading!);
+        }
     }
 
     /// <summary>旋转至少 700ms，避免刷新太快看不到反馈。</summary>
@@ -146,6 +170,15 @@ public sealed class MainViewModel : Observable
     // ----- 设备页 -----
 
     public bool HasDevices => Devices.Count > 0;
+    public bool HasOnlineDevices => OnlineDevices.Count > 0;
+    public bool NoOnlineDevices => OnlineDevices.Count == 0;
+    public string FlyoutUpdatedText => _m.Refreshing ? "正在刷新…" : _m.UpdatedAt is { } at ? $"{at:HH:mm} 更新" : "正在读取…";
+
+    public bool Demo
+    {
+        get => _m.Demo;
+        set => _m.Demo = value;
+    }
     public bool Loading => _m.UpdatedAt == null;
     public bool NoDevices => !HasDevices && !Loading;
     public string SupportedText { get; private set; } = "";

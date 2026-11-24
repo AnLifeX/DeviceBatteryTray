@@ -22,6 +22,7 @@ public static class Program
     ///   --restore-taskbar 还原任务栏（程序被强制结束后任务按钮区仍是缩窄的）
     ///   --dump out.txt   读一遍所有设备写出收发记录，并输出界面预览图
     ///   --no-elevate     不请求管理员权限
+    ///   --demo           演示模式：用模拟设备显示任务栏电量条、弹出面板和主页面
     ///   --wait-pid N     （自动更新内部用）等旧进程退出后再启动
     /// </summary>
     [STAThread]
@@ -36,15 +37,26 @@ public static class Program
 
         if (args.Length == 2 && args[0] == "--dump") { Dump(args[1]); return; }
 
-        // 开发用：--demo-ui [home|settings] [light|dark] [out.png] 用演示数据打开主页面（不读设备、不挂任务栏）
+        // 开发用：--demo-ui [home|settings|flyout] [light|dark] [out.png] 用演示数据打开主页面（不读设备、不挂任务栏）
         if (args.Length >= 1 && args[0] == "--demo-ui")
         {
             ApplicationConfiguration.Initialize();
             if (args.Length > 2) { AppSettings.Current.Theme = args[2] == "dark" ? ThemeMode.Dark : ThemeMode.Light; Theme.Invalidate(); }
             Views.WpfHost.EnsureApp();
-            var w = new Views.MainWindow(new DemoModel(), args.Length > 1 && args[1] == "settings" ? MainPage.Settings : MainPage.Home);
+            System.Windows.Window w;
+            if (args.Length > 1 && args[1] == "flyout")
+            {
+                var f = new Views.FlyoutWindow(new DemoModel());
+                var wa = Screen.PrimaryScreen!.WorkingArea;
+                f.ShowNear(new Point(wa.Right - 300, wa.Bottom));
+                w = f;
+            }
+            else
+            {
+                w = new Views.MainWindow(new DemoModel(), args.Length > 1 && args[1] == "settings" ? MainPage.Settings : MainPage.Home);
+                Views.WpfHost.Show(w);
+            }
             w.Closed += (_, _) => Application.Exit();
-            Views.WpfHost.Show(w);
             if (args.Length > 3) // 第 4 个参数：渲染成图片后退出（锁屏 / 远程时也能出图）
             {
                 var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
@@ -98,7 +110,7 @@ public static class Program
         Application.ThreadException += (_, e) => Log.W("UI 线程异常: " + e.Exception);
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Log.W("未处理异常: " + e.ExceptionObject);
 
-        Application.Run(new TrayApp(CreateProviders(), showMain: !background, justUpdated: args.Contains("--updated")));
+        Application.Run(new TrayApp(CreateProviders(), showMain: !background, justUpdated: args.Contains("--updated"), demo: args.Contains("--demo")));
     }
 
     /// <summary>卸载前（此时程序已被 Velopack 结束）：还原任务栏，删除开机自启项和设置 / 日志。</summary>
@@ -215,58 +227,31 @@ public static class Program
         }).ToList();
         File.WriteAllLines(file, lines);
 
-        ApplicationConfiguration.Initialize();
-        var demo = new DemoModel();
-        float s = 1;
-        var bg = Color.FromArgb(70, 70, 70);
-
-        // 预览 1：任务栏内嵌条 + 深色/浅色面板（含新版本提示）+ 空面板
-        using var strip = TaskbarWidget.Render(demo.Devices.Where(d => d.Online)
+        // 任务栏内嵌条预览（演示数据）；面板和主页面的预览用 --demo-ui
+        using var strip = TaskbarWidget.Render(DemoData.Devices.Where(d => d.Online)
             .Select(d => new TaskbarWidget.Item(d.Kind, d.Name, d.Reading!)).ToList(), 40, Color.White);
-        using var fDark = Flyout.Render(demo, Theme.Of(true), s, "dev:mouse", null, 0, new());
-        using var fLight = Flyout.Render(demo, Theme.Of(false), s, "settings", null, 0, new());
-        using var fEmpty = Flyout.Render(new DemoModel { Empty = true }, Theme.Of(true), s, null, null, 0, new());
-        int pw = fDark.Width + fLight.Width + fEmpty.Width + 64, ph = Math.Max(fDark.Height, fLight.Height) + strip.Height * 2 + 48;
-        using (var sheet = new Bitmap(pw, ph))
+        using var sheet = new Bitmap(strip.Width * 2 + 32, strip.Height * 2 + 16);
+        using (var g = Graphics.FromImage(sheet))
         {
-            using (var g = Graphics.FromImage(sheet))
-            {
-                g.Clear(bg);
-                using (var tb = new SolidBrush(Color.FromArgb(32, 32, 32))) g.FillRectangle(tb, 0, 8, sheet.Width, strip.Height * 2);
-                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
-                g.DrawImage(strip, 16, 8, strip.Width * 2, strip.Height * 2);
-                int y = strip.Height * 2 + 24;
-                g.DrawImage(fDark, 16, y);
-                g.DrawImage(fLight, 32 + fDark.Width, y);
-                g.DrawImage(fEmpty, 48 + fDark.Width + fLight.Width, y);
-            }
-            sheet.Save(Path.ChangeExtension(file, ".png"));
+            g.Clear(Color.FromArgb(32, 32, 32));
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+            g.DrawImage(strip, 16, 8, strip.Width * 2, strip.Height * 2);
         }
-
+        sheet.Save(Path.ChangeExtension(file, ".png"));
     }
 
     /// <summary>--dump 预览用的演示数据。</summary>
     sealed class DemoModel : IAppModel
     {
-        public bool Empty { get; init; }
-        public IReadOnlyList<DeviceStatus> Devices => Empty
-            ? new List<DeviceStatus> { new("vgn", DeviceKind.Keyboard, "VGN V98Pro V2 键盘", BatteryReading.Offline) }
-            : new List<DeviceStatus>
-            {
-                new("vgn", DeviceKind.Keyboard, "VGN V98Pro V2 键盘", new(ReadState.Ok, 73)),
-                new("mouse", DeviceKind.Mouse, "雷神 ML903 mini 鼠标", new(ReadState.Ok, 18)),
-                new("gamesir", DeviceKind.Gamepad, "盖世小鸡手柄", new(ReadState.Ok, 35, true)),
-                new("flydigi", DeviceKind.Gamepad, "飞智 黑武士 3 Pro", new(ReadState.Ok, 100, Detail: "估算")),
-                new("edifier", DeviceKind.Headset, "漫步者 HECATE G2", BatteryReading.Offline),
-                new("other", DeviceKind.Mouse, "未插入的接收器（不显示）", BatteryReading.NotFound),
-                new("flydigi-admin", DeviceKind.Gamepad, "飞智 黑武士 3 Pro（普通权限时）", new(ReadState.Error, Detail: FlydigiVader.NeedAdminDetail)),
-            };
+        public IReadOnlyList<DeviceStatus> Devices => DemoData.Devices
+            .Append(new DeviceStatus("demo-admin", DeviceKind.Gamepad, "飞智 黑武士 3 Pro（普通权限时）",
+                new BatteryReading(ReadState.Error, Detail: FlydigiVader.NeedAdminDetail))).ToList();
         public DateTime? UpdatedAt => new DateTime(2026, 11, 24, 14, 32, 5);
         public bool Refreshing => false;
-        public UpdateState Update => Empty ? UpdateState.Idle
-            : new(UpdateStatus.Available, new AppUpdate(new Version(0, 2, 0), null!));
+        public UpdateState Update => new(UpdateStatus.Available, new AppUpdate(new Version(0, 2, 0), null!));
         public bool AutoStart { get => true; set { } }
         public bool Elevated => true;
+        public bool Demo { get => true; set { } }
         public event Action? Changed { add { } remove { } }
         public void Refresh() { }
         public void CheckUpdate() { }

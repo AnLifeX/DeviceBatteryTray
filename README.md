@@ -69,7 +69,7 @@
 
 - **任务栏电量条**：托盘区左侧显示每个**在线**设备的「设备图标 + 电池格 + 百分比」，多个设备两行排列；
   ≤ 40% 黄色、≤ 20% 红色、充电蓝色。休眠 / 未连接 / 不支持的设备不显示。跟随任务栏深浅色。
-- **弹出面板**：点击电量条弹出（Win11 风格，Win10 上同样是圆角 + 阴影）。显示在线设备和更新时间；
+- **弹出面板**：点击电量条弹出（WPF-UI 风格，与主页面一致，上滑淡入 / 下滑淡出）。显示在线设备和更新时间；
   右上角刷新（面板不关闭，原地更新）；有新版本时显示提示；底部「主页面」「设置」「退出」。点面板外或按 Esc 关闭。
 - **主页面**（WPF + [WPF-UI](https://github.com/lepoco/wpfui)，Fluent 风格，跟随系统深浅色，Win11 上有 Mica 背景）：
   双击程序打开（程序已在运行时也一样，会唤起已有实例），关闭主页面程序仍在后台运行。
@@ -79,6 +79,9 @@
   - 设置和日志在 `%APPDATA%\DeviceBatteryTray\`（`settings.json`、`DeviceBatteryTray.log`）。
 - **自动更新**（可关闭；检查间隔 1 小时 ~ 每周，默认 6 小时）：启动 20 秒后及之后按间隔检查 GitHub 上已发布的 Release
   （需要仓库公开；草稿不算）。由 Velopack 下载（优先增量包），程序退出后替换文件并自动重启。直接运行编译出的 exe 不支持更新。
+- **演示模式**：设置 →「关于」里打开（或 `--demo` 启动），用模拟设备展示任务栏电量条、弹出面板和主页面，
+  不读取真实设备、不弹低电量提醒；重启后自动关闭。
+- **安装 / 更新界面**：使用统一的启动画面（`src/DeviceBatteryTray/splash.png`）。
 - **卸载**：会先还原任务栏，删除开机自启项和 `%APPDATA%\DeviceBatteryTray`。
 - **管理员权限**（仅为读取飞智黑武士）：
   - 只有「设置里开着读取黑武士 + 装了飞智空间站 + 插着黑武士接收器」时才请求，否则以普通权限运行、不弹 UAC。
@@ -93,14 +96,15 @@
 - `--dump out.txt`：读一遍所有设备写出原始收发记录，并用演示数据输出界面预览
   `out.png`（任务栏条 + 面板）、`out-main-dark.png` / `out-main-light.png`（主页面）
 - `--no-elevate`：不请求管理员权限
-- `--demo-ui [home|settings] [light|dark] [out.png]`：开发用，用演示数据打开主页面；给出 png 路径时渲染成图片后退出
+- `--demo`：演示模式启动
+- `--demo-ui [home|settings|flyout] [light|dark] [out.png]`：开发用，用演示数据打开主页面；给出 png 路径时渲染成图片后退出
 
 ## 编译与发布
 
 ```powershell
 dotnet publish src/DeviceBatteryTray -c Release -r win-x64 --self-contained false -o publish
 dotnet tool restore   # 安装打包工具 vpk（Velopack，版本见 .config/dotnet-tools.json）
-dotnet vpk pack -u DeviceBatteryTray -v 0.1.0 -p publish -e DeviceBatteryTray.exe --packTitle 设备电量 -i src/DeviceBatteryTray/app.ico -f net8-x64-desktop
+dotnet vpk pack -u DeviceBatteryTray -v 0.1.0 -p publish -e DeviceBatteryTray.exe --packTitle 设备电量 -i src/DeviceBatteryTray/app.ico -f net8-x64-desktop --splashImage src/DeviceBatteryTray/splash.png --splashProgressColor "#2DD4BF"
 ```
 
 CI（`.github/workflows/ci.yml`）只在推送 `vX.Y.Z` 标签时运行：编译、用 Velopack 打包（含相对上一已发布版本的增量包），
@@ -114,7 +118,12 @@ git push origin v0.2.0
 测试更新流程：用 `vpk pack` 依次打包两个版本到同一个目录，安装旧版本后，设置环境变量
 `DEVICEBATTERYTRAY_UPDATE_DIR` 指向该目录再启动程序，就会从本地目录更新。
 
-程序图标 `app.ico` 由 `tools/IconGen` 生成：`dotnet run --project tools/IconGen -- src/DeviceBatteryTray/app.ico preview.png`
+程序图标 `app.ico` 和安装启动画面 `splash.png` 由 `tools/IconGen` 生成（方案 ring：深色底 + 渐变电量环 + 闪电）：
+```
+dotnet run --project tools/IconGen -- src/DeviceBatteryTray/app.ico preview.png --design ring
+dotnet run --project tools/IconGen -- --splash src/DeviceBatteryTray/splash.png --design ring
+dotnet run --project tools/IconGen -- --candidates candidates.png   # 所有方案对比
+```
 
 ## 目录
 
@@ -122,13 +131,13 @@ git push origin v0.2.0
   - `Hid/` HID 枚举与请求/应答
   - `Devices/` 各设备的电量读取
   - `Tray/` 任务栏内嵌条、弹出面板、主逻辑
-  - `Views/` 主页面（WPF：窗口、设备页、设置页、ViewModel）
-  - `Ui/` 弹出面板用的主题配色与绘制工具、程序图标
+  - `Views/` 主页面和弹出面板（WPF：窗口、设备页、设置页、ViewModel）
+  - `Ui/` 主题（深浅色）、演示数据、程序图标
   - `AppSettings.cs` 设置，`AutoStart.cs` 开机自启，`Updater.cs` 自动更新（Velopack）
 - `tools/HidProbe/` HID 调试工具：列接口（含 Report ID）/ 发包 / 被动监听 / 读 Feature
 - `tools/GameSirProbe/` 32 位，调用盖世小鸡 SDK 并截获其 HID 收发
 - `tools/FlydigiProbe/` 经飞智过滤驱动查询黑武士（需管理员）
-- `tools/IconGen/` 生成程序图标
+- `tools/IconGen/` 生成程序图标和安装启动画面
 - `docs/protocols/` 各设备协议笔记
 
 ## 声明
