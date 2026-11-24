@@ -1,0 +1,138 @@
+<UserControl x:Class="DeviceBatteryTray.Views.SettingsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <Style x:Key="Section" TargetType="ui:TextBlock">
+            <Setter Property="FontTypography" Value="BodyStrong" />
+            <Setter Property="Margin" Value="2,20,0,8" />
+        </Style>
+        <Style TargetType="ui:CardControl" BasedOn="{StaticResource {x:Type ui:CardControl}}">
+            <Setter Property="Margin" Value="0,0,0,4" />
+            <Setter Property="Padding" Value="18,12" />
+        </Style>
+        <Style TargetType="ui:CardAction" BasedOn="{StaticResource {x:Type ui:CardAction}}">
+            <Setter Property="Margin" Value="0,0,0,4" />
+            <Setter Property="Padding" Value="18,12" />
+        </Style>
+        <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="MinWidth" Value="180" />
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="0,0,14,24">
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                <ui:Button Command="{Binding BackCommand}" Appearance="Transparent" Padding="8" ToolTip="返回" VerticalAlignment="Center">
+                    <ui:SymbolIcon Symbol="ArrowLeft24" FontSize="18" />
+                </ui:Button>
+                <ui:TextBlock FontTypography="Title" Text="设置" Margin="8,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <ui:TextBlock Style="{StaticResource Section}" Text="常规" />
+            <ui:CardControl Icon="{ui:SymbolIcon Power24}">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="开机自启" />
+                        <ui:TextBlock FontTypography="Caption" Text="{Binding AutoStartDescription}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:ToggleSwitch IsChecked="{Binding AutoStart}" OnContent="开" OffContent="关" />
+            </ui:CardControl>
+            <ui:CardControl Icon="{ui:SymbolIcon ArrowSync24}">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="刷新间隔" />
+                        <ui:TextBlock FontTypography="Caption" Text="多久读取一次设备电量" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ComboBox DisplayMemberPath="Text" SelectedValuePath="Value" ItemsSource="{Binding RefreshChoices}" SelectedValue="{Binding RefreshSeconds}" />
+            </ui:CardControl>
+            <ui:CardControl Icon="{ui:SymbolIcon BatteryWarning24}">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="低电量提醒" />
+                        <ui:TextBlock FontTypography="Caption" Text="电量低于该值时弹出通知（充电时不提醒）" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ComboBox DisplayMemberPath="Text" SelectedValuePath="Value" ItemsSource="{Binding LowBatteryChoices}" SelectedValue="{Binding LowBatteryPercent}" />
+            </ui:CardControl>
+
+            <ui:TextBlock Style="{StaticResource Section}" Text="设备" />
+            <ui:CardControl Icon="{ui:SymbolIcon ShieldKeyhole24}">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="读取飞智黑武士 3 Pro" />
+                        <ui:TextBlock FontTypography="Caption" Text="{Binding FlydigiDescription}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:ToggleSwitch IsChecked="{Binding ReadFlydigi}" OnContent="开" OffContent="关" />
+            </ui:CardControl>
+
+            <ui:TextBlock Style="{StaticResource Section}" Text="外观" />
+            <ui:CardControl Icon="{ui:SymbolIcon Color24}">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="主题" />
+                        <ui:TextBlock FontTypography="Caption" Text="主页面和弹出面板的颜色；任务栏上的电量条始终跟随任务栏" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ComboBox DisplayMemberPath="Text" SelectedValuePath="Value" ItemsSource="{Binding ThemeChoices}" SelectedValue="{Binding Theme}" />
+            </ui:CardControl>
+
+            <ui:TextBlock Style="{StaticResource Section}" Text="更新" />
+            <ui:CardControl Icon="{ui:SymbolIcon ArrowDownload24}">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="自动更新" />
+                        <ui:TextBlock FontTypography="Caption" Text="{Binding AutoUpdateDescription}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:ToggleSwitch IsChecked="{Binding AutoUpdate}" OnContent="开" OffContent="关" />
+            </ui:CardControl>
+            <ui:CardControl Icon="{ui:SymbolIcon ArrowSyncCircle24}" Visibility="{Binding AutoUpdate, Converter={StaticResource BoolToVis}}">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="检查间隔" />
+                        <ui:TextBlock FontTypography="Caption" Text="多久检查一次 GitHub 上的新版本（启动后也会检查一次）" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ComboBox DisplayMemberPath="Text" SelectedValuePath="Value" ItemsSource="{Binding UpdateCheckChoices}" SelectedValue="{Binding UpdateCheckHours}" />
+            </ui:CardControl>
+            <ui:CardControl Icon="{ui:SymbolIcon Info24}">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="{Binding Version, StringFormat=当前版本 {0}}" />
+                        <ui:TextBlock FontTypography="Caption" Text="{Binding UpdateStatusText}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:Button Content="{Binding UpdateActionText}" Command="{Binding UpdateActionCommand}" IsEnabled="{Binding UpdateActionEnabled}" MinWidth="110">
+                    <ui:Button.Style>
+                        <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding UpdateActionPrimary}" Value="True">
+                                    <Setter Property="Appearance" Value="Primary" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ui:Button.Style>
+                </ui:Button>
+            </ui:CardControl>
+
+            <ui:TextBlock Style="{StaticResource Section}" Text="关于" />
+            <ui:CardAction Icon="{ui:SymbolIcon Document24}" Command="{Binding OpenLogCommand}">
+                <StackPanel>
+                    <ui:TextBlock Text="运行日志" />
+                    <ui:TextBlock FontTypography="Caption" Text="{Binding LogPath}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </ui:CardAction>
+            <ui:CardAction Icon="{ui:SymbolIcon Globe24}" Command="{Binding OpenRepoCommand}">
+                <StackPanel>
+                    <ui:TextBlock Text="项目主页" />
+                    <ui:TextBlock FontTypography="Caption" Text="{Binding RepoUrl}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </ui:CardAction>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

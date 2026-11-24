@@ -26,7 +26,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
     private readonly EventWaitHandle _exitEvent, _showEvent;
     private Flyout? _flyout;
     private DateTime _flyoutClosedAt;
-    private MainWindow? _main;
+    private Views.MainWindow? _main;
     private int _polling;
     private bool? _autoStart;
     private int _updateHours = AppSettings.Current.UpdateCheckHours;
@@ -178,20 +178,21 @@ public sealed class TrayApp : ApplicationContext, IAppModel
 
     public void ShowMain(MainPage page)
     {
-        if (_main == null || _main.IsDisposed)
+        if (_main == null)
         {
-            _main = new MainWindow(this, page);
-            _main.FormClosed += (_, _) => _main = null;
-            _main.Show();
+            Views.WpfHost.EnsureApp();
+            _main = new Views.MainWindow(this, page);
+            _main.Closed += (_, _) => _main = null;
+            Views.WpfHost.Show(_main);
         }
         else
         {
             _main.Page = page;
-            if (_main.WindowState == FormWindowState.Minimized) _main.WindowState = FormWindowState.Normal;
+            if (_main.WindowState == System.Windows.WindowState.Minimized) _main.WindowState = System.Windows.WindowState.Normal;
             _main.Show();
         }
         _main.Activate();
-        SetForegroundWindow(_main.Handle);
+        SetForegroundWindow(new System.Windows.Interop.WindowInteropHelper(_main).Handle);
     }
 
     public void Exit() => ExitThread();
@@ -257,7 +258,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         {
             await Updater.DownloadAsync(info, new Progress<int>(p => SetUpdate(new UpdateState(UpdateStatus.Downloading, info, p))));
             Log.W($"已下载 v{info.Version}，退出后由更新程序替换并重启");
-            Updater.ApplyAndRestart(info, showMain: _main is { Visible: true });
+            Updater.ApplyAndRestart(info, showMain: _main is { IsVisible: true });
             ExitThread();
         }
         catch (Exception e)

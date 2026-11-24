@@ -36,6 +36,25 @@ public static class Program
 
         if (args.Length == 2 && args[0] == "--dump") { Dump(args[1]); return; }
 
+        // 开发用：--demo-ui [home|settings] [light|dark] [out.png] 用演示数据打开主页面（不读设备、不挂任务栏）
+        if (args.Length >= 1 && args[0] == "--demo-ui")
+        {
+            ApplicationConfiguration.Initialize();
+            if (args.Length > 2) { AppSettings.Current.Theme = args[2] == "dark" ? ThemeMode.Dark : ThemeMode.Light; Theme.Invalidate(); }
+            Views.WpfHost.EnsureApp();
+            var w = new Views.MainWindow(new DemoModel(), args.Length > 1 && args[1] == "settings" ? MainPage.Settings : MainPage.Home);
+            w.Closed += (_, _) => Application.Exit();
+            Views.WpfHost.Show(w);
+            if (args.Length > 3) // 第 4 个参数：渲染成图片后退出（锁屏 / 远程时也能出图）
+            {
+                var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
+                t.Tick += (_, _) => { t.Stop(); Views.WpfHost.SaveSnapshot(w, args[3]); w.Close(); };
+                t.Start();
+            }
+            Application.Run();
+            return;
+        }
+
         if (args.Contains("--restore-taskbar")) { TaskbarWidget.RestoreTaskbarLayout(); return; } // 程序异常退出后手动还原
 
         if (args.Contains("--exit"))
@@ -224,26 +243,6 @@ public static class Program
             sheet.Save(Path.ChangeExtension(file, ".png"));
         }
 
-        // 预览 2/3：主页面（设备页 + 设置页），深色和浅色
-        foreach (var (name, dark) in new[] { ("main-dark", true), ("main-light", false) })
-        {
-            AppSettings.Current.Theme = dark ? ThemeMode.Dark : ThemeMode.Light;
-            Theme.Invalidate();
-            var size = new Size(960, 1060);
-            using var sheet = new Bitmap(size.Width * 2 + 16, size.Height);
-            using (var g = Graphics.FromImage(sheet))
-            {
-                g.Clear(bg);
-                foreach (var (page, i) in new[] { (MainPage.Home, 0), (MainPage.Settings, 1) })
-                {
-                    using var w = new MainWindow(demo, page) { UiScale = 1 };
-                    using var bmp = new Bitmap(size.Width, size.Height);
-                    using (var pg = Graphics.FromImage(bmp)) w.PaintPage(pg, size);
-                    g.DrawImage(bmp, i * (size.Width + 16), 0);
-                }
-            }
-            sheet.Save(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(file))!, Path.GetFileNameWithoutExtension(file) + "-" + name + ".png"));
-        }
     }
 
     /// <summary>--dump 预览用的演示数据。</summary>

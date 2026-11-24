@@ -1,0 +1,29 @@
+<ui:FluentWindow x:Class="DeviceBatteryTray.Views.MainWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="设备电量"
+                 Width="760" Height="640" MinWidth="560" MinHeight="460"
+                 WindowStartupLocation="CenterScreen"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowCornerPreference="Round">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="设备电量">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon x:Name="TitleIcon" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <!-- 单页：设备 / 设置，切换时左右滑动 -->
+        <ContentControl x:Name="Host" Grid.Row="1" Margin="32,4,32,0" Focusable="False">
+            <ContentControl.RenderTransform>
+                <TranslateTransform x:Name="HostShift" />
+            </ContentControl.RenderTransform>
+        </ContentControl>
+    </Grid>
+</ui:FluentWindow>
