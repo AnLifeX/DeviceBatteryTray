@@ -15,6 +15,7 @@ namespace DeviceBatteryTray.Tray;
 public sealed class TrayApp : ApplicationContext, IAppModel
 {
     static readonly TimeSpan FirstUpdateCheck = TimeSpan.FromSeconds(20);
+    static readonly TimeSpan UpdateCheckInterval = TimeSpan.FromHours(1);
 
     private readonly List<BatteryProvider> _providers;
     /// <summary>最近一次读到的所有设备（同型号多个接收器各一项）；还没读过时每个型号一项、读数为 null。</summary>
@@ -31,7 +32,6 @@ public sealed class TrayApp : ApplicationContext, IAppModel
     private Views.MainWindow? _main;
     private int _polling;
     private bool? _autoStart;
-    private int _updateHours = AppSettings.Current.UpdateCheckHours;
     private Action? _balloonClick;
     private bool _notifying; // 有提醒正在显示：托盘图标要保持可见
 
@@ -94,7 +94,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         var interval = TimeSpan.FromSeconds(AppSettings.Current.RefreshSeconds);
         _timer = new System.Threading.Timer(_ => PollAsync(), null, TimeSpan.Zero, interval);
         _updateTimer = new System.Threading.Timer(_ => _ui.Post(_ => CheckUpdate(manual: false), null), null,
-            FirstUpdateCheck, TimeSpan.FromHours(_updateHours));
+            FirstUpdateCheck, UpdateCheckInterval);
 
         if (showMain) _ui.Post(_ => ShowMain(MainPage.Home), null);
     }
@@ -119,12 +119,6 @@ public sealed class TrayApp : ApplicationContext, IAppModel
     {
         var interval = TimeSpan.FromSeconds(AppSettings.Current.RefreshSeconds);
         _timer.Change(interval, interval);
-        if (_updateHours != AppSettings.Current.UpdateCheckHours)
-        {
-            _updateHours = AppSettings.Current.UpdateCheckHours;
-            var period = TimeSpan.FromHours(_updateHours);
-            _updateTimer.Change(period, period);
-        }
         // 不清空已提醒记录：否则切主题、改名等任何设置变化都会把低电量再提醒一遍。
         // 改了阈值也不用清：RefreshWidget 会把高于新阈值的移出记录，新跌破的照常提醒。
         RefreshWidget();

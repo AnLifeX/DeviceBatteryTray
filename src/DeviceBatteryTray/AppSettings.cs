@@ -20,11 +20,8 @@ public sealed class AppSettings
     [JsonConverter(typeof(ThemeConverter))]
     public ThemeMode? Theme { get; set; }
 
-    /// <summary>自动更新：按间隔检查，发现新版本就下载新 exe、替换自己并重启。</summary>
+    /// <summary>自动更新：启动后和之后每小时检查一次，发现新版本就下载安装包、替换程序并重启。</summary>
     public bool AutoUpdate { get; set; } = true;
-
-    /// <summary>检查更新的间隔（小时）。</summary>
-    public int UpdateCheckHours { get; set; } = 6;
 
     /// <summary>用户在主页面关掉「显示」的设备 ID（不在任务栏 / 弹出面板显示，也不提醒）。默认全部显示。</summary>
     public List<string> HiddenDevices { get; set; } = new();
@@ -37,8 +34,6 @@ public sealed class AppSettings
 
     public static readonly int[] RefreshChoices = { 10, 30, 60, 120, 300 };
     public static readonly int[] LowBatteryChoices = { 0, 10, 15, 20, 30 };
-    public static readonly int[] UpdateCheckChoices = { 1, 6, 12, 24, 168 };
-
     static readonly string FilePath = Path.Combine(AppPaths.DataDir, "settings.json");
     // 有一个开发版本把设置放在了 %LOCALAPPDATA%\DeviceBatteryTray（后来曾是测试版的安装目录），读不到新位置时从这里迁移
     static readonly string OldFilePath = Path.Combine(
@@ -114,7 +109,6 @@ public sealed class AppSettings
     {
         RefreshSeconds = Math.Clamp(RefreshSeconds, 5, 3600);
         LowBatteryPercent = Math.Clamp(LowBatteryPercent, 0, 100);
-        UpdateCheckHours = Math.Clamp(UpdateCheckHours, 1, 24 * 30);
         Theme ??= Ui.Theme.SystemDark() ? ThemeMode.Dark : ThemeMode.Light;
         HiddenDevices ??= new();
         DeviceNames ??= new();
@@ -123,7 +117,6 @@ public sealed class AppSettings
 
     public static string RefreshText(int sec) => sec < 60 ? $"{sec} 秒" : $"{sec / 60} 分钟";
     public static string LowBatteryText(int p) => p == 0 ? "不提醒" : $"低于 {p}%";
-    public static string UpdateCheckText(int h) => h switch { < 24 => $"每 {h} 小时", 24 => "每天", 168 => "每周", _ => $"每 {h / 24} 天" };
 
     /// <summary>Light / Dark；其他值（旧版本的 "System"）读成 null，由 Normalize 按系统深浅色确定。</summary>
     sealed class ThemeConverter : JsonConverter<ThemeMode?>

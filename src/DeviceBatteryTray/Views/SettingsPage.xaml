@@ -91,15 +91,6 @@
                     </ui:CardControl.Header>
                     <ui:ToggleSwitch IsChecked="{Binding AutoUpdate}" OnContent="开" OffContent="关" />
                 </ui:CardControl>
-                <ui:CardControl Icon="{ui:SymbolIcon ArrowSyncCircle24}" Visibility="{Binding AutoUpdate, Converter={StaticResource BoolToVis}}">
-                    <ui:CardControl.Header>
-                        <StackPanel>
-                            <ui:TextBlock Text="检查间隔" />
-                            <ui:TextBlock FontTypography="Caption" Text="多久检查一次 GitHub 上的新版本（启动后也会检查一次）" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
-                    </ui:CardControl.Header>
-                    <ComboBox DisplayMemberPath="Text" SelectedValuePath="Value" ItemsSource="{Binding UpdateCheckChoices}" SelectedValue="{Binding UpdateCheckHours}" />
-                </ui:CardControl>
                 <ui:CardControl Icon="{ui:SymbolIcon Info24}">
                     <ui:CardControl.Header>
                         <StackPanel>

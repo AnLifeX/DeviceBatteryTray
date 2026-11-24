@@ -329,14 +329,6 @@ public sealed class MainViewModel : Observable
     }
     public string AutoUpdateDescription => AppSettings.Current.AutoUpdate ? "发现新版本时自动下载、替换程序并重启" : "已关闭，可以在下面手动检查更新";
 
-    public IReadOnlyList<Choice> UpdateCheckChoices { get; } =
-        AppSettings.UpdateCheckChoices.Select(v => new Choice(AppSettings.UpdateCheckText(v), v)).ToList();
-    public object UpdateCheckHours
-    {
-        get => AppSettings.Current.UpdateCheckHours;
-        set { if (value is int v) AppSettings.Change(s => s.UpdateCheckHours = v); }
-    }
-
     public string UpdateStatusText => _m.Update.Status switch
     {
         UpdateStatus.Checking => "正在检查更新…",
