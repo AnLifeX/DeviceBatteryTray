@@ -23,10 +23,29 @@ public sealed class FlydigiVader : BatteryProvider
         return new System.Security.Principal.WindowsPrincipal(id).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
     }
 
+    public const string NeedAdminDetail = "需要管理员权限才能读取电量";
+
+    static bool ServiceInstalled()
+    {
+        try
+        {
+            using var k = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\FDGMonitorService");
+            return k != null;
+        }
+        catch { return false; }
+    }
+
+    /// <summary>
+    /// 是否值得请求管理员权限：设置里开着「读取黑武士」+ 装了飞智空间站 + 插着接收器。
+    /// 不满足就以普通权限运行，不弹 UAC。
+    /// </summary>
+    public static bool NeedsElevation =>
+        AppSettings.Current.ReadFlydigi && ServiceInstalled() && Present(Vid, Pid);
+
     public override BatteryReading Read()
     {
-        if (!Present(Vid, Pid)) return BatteryReading.NotFound;
-        if (!IsElevated()) return new BatteryReading(ReadState.Error, Detail: "需要以管理员身份运行");
+        if (!AppSettings.Current.ReadFlydigi || !Present(Vid, Pid)) return BatteryReading.NotFound;
+        if (!IsElevated()) return new BatteryReading(ReadState.Error, Detail: NeedAdminDetail);
         if (!Comm.EnsureStarted(out var why)) return BatteryReading.Fail(why);
 
         var info = Comm.QueryGamepadInfo(TimeSpan.FromMilliseconds(1500));

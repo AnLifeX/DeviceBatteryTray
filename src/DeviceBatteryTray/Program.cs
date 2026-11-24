@@ -45,10 +45,11 @@ public static class Program
         // 已在运行：让它打开主页面（开机自启重复触发时什么都不做）
         if (SignalRunning(showMain: !background)) return;
 
-        // 飞智黑武士要经内核过滤驱动通讯，需要管理员权限：非管理员启动时请求一次提权。
-        // 用户在 UAC 里点了「否」就照常以普通权限运行，黑武士显示「需要以管理员身份运行」。
+        // 飞智黑武士要经内核过滤驱动通讯，需要管理员权限。只有「设置里开着 + 装了飞智空间站 + 插着接收器」
+        // 时才请求提权，其他情况直接以普通权限运行、不弹 UAC。
+        // 用户在 UAC 里点了「否」就照常以普通权限运行，黑武士显示「需要管理员权限」。
         // 已开启开机自启时，存在一个「最高权限」计划任务，通过它启动自己就不会弹 UAC。
-        if (!FlydigiVader.IsElevated() && !args.Contains("--no-elevate"))
+        if (!FlydigiVader.IsElevated() && !args.Contains("--no-elevate") && FlydigiVader.NeedsElevation)
         {
             if (TryRunScheduledTask())
             {
@@ -234,7 +235,8 @@ public static class Program
                 new("gamesir", DeviceKind.Gamepad, "盖世小鸡手柄", new(ReadState.Ok, 35, true)),
                 new("flydigi", DeviceKind.Gamepad, "飞智 黑武士 3 Pro", new(ReadState.Ok, 100, Detail: "估算")),
                 new("edifier", DeviceKind.Headset, "漫步者 HECATE G2", BatteryReading.Offline),
-                new("other", DeviceKind.Mouse, "未插入的接收器", BatteryReading.NotFound),
+                new("other", DeviceKind.Mouse, "未插入的接收器（不显示）", BatteryReading.NotFound),
+                new("flydigi-admin", DeviceKind.Gamepad, "飞智 黑武士 3 Pro（普通权限时）", new(ReadState.Error, Detail: FlydigiVader.NeedAdminDetail)),
             };
         public DateTime? UpdatedAt => new DateTime(2026, 11, 24, 14, 32, 5);
         public bool Refreshing => false;
@@ -247,6 +249,7 @@ public static class Program
         public void CheckUpdate() { }
         public void InstallUpdate() { }
         public void ShowMain(MainPage page) { }
+        public void RestartElevated() { }
         public void Exit() { }
     }
 }

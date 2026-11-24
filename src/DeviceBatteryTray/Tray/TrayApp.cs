@@ -14,7 +14,6 @@ namespace DeviceBatteryTray.Tray;
 /// </summary>
 public sealed class TrayApp : ApplicationContext, IAppModel
 {
-    static readonly TimeSpan UpdateCheckInterval = TimeSpan.FromHours(6);
     static readonly TimeSpan FirstUpdateCheck = TimeSpan.FromSeconds(20);
 
     private readonly List<BatteryProvider> _providers;
@@ -30,6 +29,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
     private MainWindow? _main;
     private int _polling;
     private bool? _autoStart;
+    private int _updateHours = AppSettings.Current.UpdateCheckHours;
     private Version? _notifiedVersion;
     private Action? _balloonClick;
 
@@ -67,7 +67,8 @@ public sealed class TrayApp : ApplicationContext, IAppModel
 
         var interval = TimeSpan.FromSeconds(AppSettings.Current.RefreshSeconds);
         _timer = new System.Threading.Timer(_ => PollAsync(), null, TimeSpan.Zero, interval);
-        _updateTimer = new System.Threading.Timer(_ => _ui.Post(_ => CheckUpdate(manual: false), null), null, FirstUpdateCheck, UpdateCheckInterval);
+        _updateTimer = new System.Threading.Timer(_ => _ui.Post(_ => CheckUpdate(manual: false), null), null,
+            FirstUpdateCheck, TimeSpan.FromHours(_updateHours));
 
         if (showMain) _ui.Post(_ => ShowMain(MainPage.Home), null);
         if (justUpdated) _ui.Post(_ => Notify("已更新", $"设备电量已更新到 v{Updater.CurrentText}", ToolTipIcon.Info), null);
@@ -94,6 +95,12 @@ public sealed class TrayApp : ApplicationContext, IAppModel
     {
         var interval = TimeSpan.FromSeconds(AppSettings.Current.RefreshSeconds);
         _timer.Change(interval, interval);
+        if (_updateHours != AppSettings.Current.UpdateCheckHours)
+        {
+            _updateHours = AppSettings.Current.UpdateCheckHours;
+            var period = TimeSpan.FromHours(_updateHours);
+            _updateTimer.Change(period, period);
+        }
         _lowNotified.Clear();
         RefreshWidget();
         RaiseChanged();
@@ -190,6 +197,20 @@ public sealed class TrayApp : ApplicationContext, IAppModel
 
     public void Exit() => ExitThread();
 
+    /// <summary>
+    /// 以管理员身份重启：起一个普通权限的新进程，等本进程退出后按正常启动流程提权
+    /// （有最高权限计划任务就用它，不弹 UAC；否则弹 UAC，取消的话以普通权限继续运行）。
+    /// </summary>
+    public void RestartElevated()
+    {
+        var psi = new System.Diagnostics.ProcessStartInfo(Environment.ProcessPath ?? Application.ExecutablePath) { UseShellExecute = false };
+        psi.ArgumentList.Add("--wait-pid");
+        psi.ArgumentList.Add(Environment.ProcessId.ToString());
+        System.Diagnostics.Process.Start(psi);
+        Log.W("以管理员身份重启");
+        ExitThread();
+    }
+
     public bool AutoStart
     {
         get => _autoStart ??= DeviceBatteryTray.AutoStart.Enabled;
@@ -209,7 +230,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
 
     private async void CheckUpdate(bool manual)
     {
-        if (!manual && AppSettings.Current.Update == UpdateMode.Off) return;
+        if (!manual && !AppSettings.Current.AutoUpdate) return;
         if (Update.Status is UpdateStatus.Checking or UpdateStatus.Downloading) return;
         SetUpdate(new UpdateState(UpdateStatus.Checking));
         try
@@ -220,7 +241,8 @@ public sealed class TrayApp : ApplicationContext, IAppModel
             SetUpdate(new UpdateState(UpdateStatus.Available, info));
             if (manual) return;
 
-            if (AppSettings.Current.Update == UpdateMode.Auto && Updater.CanSelfUpdate) InstallUpdate();
+            // 自动更新：直接下载替换并重启；开发版本不能自我替换，只提醒
+            if (Updater.CanSelfUpdate) InstallUpdate();
             else if (_notifiedVersion != info.Version)
             {
                 _notifiedVersion = info.Version;
@@ -242,7 +264,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         {
             await Updater.InstallAsync(info, new Progress<int>(p => SetUpdate(new UpdateState(UpdateStatus.Downloading, info, p))));
             Log.W($"已下载 {info.Tag}，重启");
-            Updater.Restart();
+            Updater.Restart(showMain: _main is { Visible: true });
             ExitThread();
         }
         catch (Exception e)

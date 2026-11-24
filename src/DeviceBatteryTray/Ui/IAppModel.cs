@@ -27,5 +27,8 @@ public interface IAppModel
     void CheckUpdate();
     void InstallUpdate();
     void ShowMain(MainPage page);
+
+    /// <summary>以管理员身份重启（读取飞智黑武士用）。</summary>
+    void RestartElevated();
     void Exit();
 }

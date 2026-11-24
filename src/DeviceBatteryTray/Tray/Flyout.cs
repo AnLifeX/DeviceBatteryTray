@@ -287,7 +287,7 @@ public sealed class Flyout : Form
             g.DrawString("没有在线的设备", body, sub, new RectangleF(r.X, r.Y + S(54), w, S(22)), Draw.Center);
             var link = new Rectangle(x0 + w / 2 - S(60), r.Y + S(82), S(120), S(28));
             Draw.Fill(g, StateBg("home"), link, S(4));
-            g.DrawString("查看全部设备", small, accent, link, Draw.Center);
+            g.DrawString("打开主页面", small, accent, link, Draw.Center);
             Hit("home", link);
             y += listH;
         }

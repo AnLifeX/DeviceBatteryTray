@@ -174,8 +174,7 @@ public sealed class MainWindow : Form
         g.DrawString("设备电量", title, fore, new RectangleF(S(62), S(14), S(170), S(22)), Draw.Left);
         g.DrawString("v" + Updater.CurrentText, small, sub, new RectangleF(S(62), S(36), S(170), S(18)), Draw.Left);
 
-        int y = S(76);
-        foreach (var (page, glyph, text) in new[] { (MainPage.Home, GHome, "设备"), (MainPage.Settings, GSetting, "设置") })
+        void NavItem(MainPage page, string glyph, string text, int y)
         {
             string id = "nav:" + page;
             var r = new Rectangle(S(8), y, S(NavW) - S(16), S(38));
@@ -185,17 +184,11 @@ public sealed class MainWindow : Form
             g.DrawString(glyph, icon, fore, new RectangleF(r.X + S(12), r.Y, S(24), r.Height), Draw.Center);
             g.DrawString(text, body, fore, new RectangleF(r.X + S(46), r.Y, r.Width - S(50), r.Height), Draw.Left);
             Hit(id, r, content: false);
-            y += S(42);
         }
 
-        // 底部：权限状态
-        bool admin = _m.Elevated;
-        var pr = new RectangleF(S(20), client.Height - S(46), S(NavW) - S(28), S(30));
-        using (var dimBrush = new SolidBrush(t.TextSub))
-        {
-            g.DrawString(admin ? GAdmin : GUser, icon, dimBrush, pr with { Width = S(20) }, Draw.Center);
-            g.DrawString(admin ? "管理员权限" : "普通权限（读不到飞智黑武士）", small, dimBrush, pr with { X = pr.X + S(28), Width = pr.Width - S(28) }, Draw.Left);
-        }
+        // 页面在上，设置固定在左下角（Win11 导航栏的布局）
+        NavItem(MainPage.Home, GHome, "设备", S(76));
+        NavItem(MainPage.Settings, GSetting, "设置", client.Height - S(12) - S(38));
     }
 
     // ----- 设备页 -----
@@ -230,7 +223,26 @@ public sealed class MainWindow : Form
 
         y = PaintUpdateBanner(g, t, x, w, y);
 
-        foreach (var d in _m.Devices)
+        // 只显示接收器在的设备（在线 / 休眠 / 需要权限 / 读取失败），没插的不显示
+        var shown = _m.Devices.Where(d => d.Reading is { State: not ReadState.NotFound }).ToList();
+        if (shown.Count == 0)
+        {
+            var r = new Rectangle(x, y, w, S(200));
+            Card(g, t, r);
+            using var big = Draw.Icon(36, _s);
+            bool reading = _m.UpdatedAt == null;
+            g.DrawString(GDevices, big, dim, new RectangleF(r.X, r.Y + S(28), r.Width, S(48)), Draw.Center);
+            g.DrawString(reading ? "正在读取…" : "没有检测到设备", body, fore, new RectangleF(r.X, r.Y + S(84), r.Width, S(24)), Draw.Center);
+            if (!reading)
+            {
+                g.DrawString("插入支持的接收器后会自动出现", small, sub, new RectangleF(r.X, r.Y + S(112), r.Width, S(20)), Draw.Center);
+                g.DrawString("支持：" + string.Join("、", _m.Devices.Select(d => d.Name)), small, dim,
+                    new RectangleF(r.X + S(24), r.Y + S(144), r.Width - S(48), S(20)), Draw.Center);
+            }
+            return y + r.Height;
+        }
+
+        foreach (var d in shown)
         {
             var r = new Rectangle(x, y, w, S(72));
             Card(g, t, r);
@@ -253,16 +265,21 @@ public sealed class MainWindow : Form
                 g.DrawString($"{rd.Percent}%", num, pb, pctRect, Draw.Right);
                 Draw.Bar(g, t, new RectangleF(pctRect.X - S(12) - barW, r.Y + r.Height / 2f - S(2), barW, S(4)), rd);
             }
+            else if (rd?.Detail == FlydigiVader.NeedAdminDetail)
+            {
+                // 黑武士插着但当前是普通权限：一键以管理员身份重启
+                Button(g, t, "elevate", "以管理员身份重启", new Rectangle(r.Right - S(20) - S(200), r.Y, S(200), r.Height));
+            }
             else
             {
-                g.DrawString(rd == null ? "…" : rd.State == ReadState.Offline ? "休眠" : "未连接", body, dim,
+                g.DrawString(rd?.State == ReadState.Offline ? "休眠" : "读取失败", body, dim,
                     new RectangleF(r.Right - S(20) - S(120), r.Y, S(120), r.Height), Draw.Right);
             }
             y += S(76);
         }
 
         y += S(8);
-        g.DrawString("任务栏只显示在线的设备。休眠或未连接的设备在下次刷新读到电量后会自动出现。", small, dim,
+        g.DrawString("任务栏只显示在线的设备；休眠的设备唤醒后，下次刷新会自动出现。", small, dim,
             new RectangleF(x + S(2), y, w, S(20)), Draw.Left);
         return y + S(20);
     }
@@ -272,7 +289,7 @@ public sealed class MainWindow : Form
         ReadState.Ok => string.Join(" · ", new[] { "已连接", r.Charging ? "充电中" : null, r.Detail }.Where(s => s != null)),
         ReadState.Offline => "接收器已连接，设备休眠或已关机",
         ReadState.NotFound => "没有检测到接收器",
-        _ => r.Detail ?? "读取失败",
+        _ => r.Detail == FlydigiVader.NeedAdminDetail ? "接收器已连接，" + r.Detail : r.Detail ?? "读取失败",
     };
 
     private int PaintUpdateBanner(Graphics g, Theme t, int x, int w, int y)
@@ -317,13 +334,24 @@ public sealed class MainWindow : Form
         y = SettingCard(g, t, x, w, y, GBattery, "低电量提醒", "电量低于该值时弹出通知（充电时不提醒）",
             r => Dropdown(g, t, "low-battery", r, AppSettings.LowBatteryText(s.LowBatteryPercent)));
 
+        y = Section(g, t, "设备", x, y);
+        y = SettingCard(g, t, x, w, y, GAdmin, "读取飞智黑武士 3 Pro",
+            !s.ReadFlydigi ? "已关闭，程序不会请求管理员权限"
+            : _m.Elevated ? "需要管理员权限（当前已是管理员）"
+            : "需要管理员权限，只在检测到黑武士接收器时才请求",
+            r => Toggle(g, t, "flydigi", r, s.ReadFlydigi));
+
         y = Section(g, t, "外观", x, y);
         y = SettingCard(g, t, x, w, y, GColor, "主题", "主页面和弹出面板的颜色；任务栏上的电量条始终跟随任务栏",
             r => Dropdown(g, t, "theme", r, AppSettings.ThemeText(s.Theme)));
 
         y = Section(g, t, "更新", x, y);
-        y = SettingCard(g, t, x, w, y, GDownload, "自动更新", "每 6 小时检查一次 GitHub 上的新版本",
-            r => Dropdown(g, t, "update-mode", r, AppSettings.UpdateText(s.Update)));
+        y = SettingCard(g, t, x, w, y, GDownload, "自动更新",
+            s.AutoUpdate ? "发现新版本时自动下载、替换程序并重启" : "已关闭，可以在下面手动检查更新",
+            r => Toggle(g, t, "auto-update", r, s.AutoUpdate));
+        if (s.AutoUpdate)
+            y = SettingCard(g, t, x, w, y, GSync, "检查间隔", "多久检查一次 GitHub 上的新版本（启动后也会检查一次）",
+                r => Dropdown(g, t, "update-interval", r, AppSettings.UpdateCheckText(s.UpdateCheckHours)));
         var u = _m.Update;
         string desc = u.Status switch
         {
@@ -490,15 +518,23 @@ public sealed class MainWindow : Form
                 ThemedMenu.Show(this, r, Enum.GetValues<ThemeMode>().Select(v =>
                     new ThemedMenu.Option(AppSettings.ThemeText(v), v == s.Theme, () => AppSettings.Change(x => x.Theme = v))), _s);
                 break;
-            case "update-mode":
-                ThemedMenu.Show(this, r, Enum.GetValues<UpdateMode>().Select(v =>
-                    new ThemedMenu.Option(AppSettings.UpdateText(v), v == s.Update, () => AppSettings.Change(x => x.Update = v))), _s);
+            case "auto-update":
+                AppSettings.Change(x => x.AutoUpdate = !x.AutoUpdate);
+                break;
+            case "update-interval":
+                ThemedMenu.Show(this, r, AppSettings.UpdateCheckChoices.Select(v =>
+                    new ThemedMenu.Option(AppSettings.UpdateCheckText(v), v == s.UpdateCheckHours, () => AppSettings.Change(x => x.UpdateCheckHours = v))), _s);
                 break;
             case "update-action":
                 if (_m.Update.Status == UpdateStatus.Available) _m.InstallUpdate();
                 else _m.CheckUpdate();
                 break;
             case "banner-update": _m.InstallUpdate(); break;
+            case "elevate": _m.RestartElevated(); break;
+            case "flydigi":
+                AppSettings.Change(x => x.ReadFlydigi = !x.ReadFlydigi);
+                _m.Refresh();
+                break;
             case "open-log":
                 if (File.Exists(Log.FilePath)) Process.Start("explorer.exe", $"/select,\"{Log.FilePath}\"");
                 break;

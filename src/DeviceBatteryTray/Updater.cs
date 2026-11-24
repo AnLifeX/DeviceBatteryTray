@@ -16,7 +16,7 @@ public sealed record UpdateState(UpdateStatus Status, UpdateInfo? Info = null, i
 }
 
 /// <summary>
-/// 从 GitHub Releases 检查 / 下载新版本（只取 Release 里名为 DeviceBatteryTray.exe 的附件）。
+/// 从 GitHub Releases 检查 / 下载新版本（便携单文件，没有安装步骤）（只取 Release 里名为 DeviceBatteryTray.exe 的附件）。
 /// 替换方式：当前 exe 改名为 .old → 新文件改名为 exe → 启动新进程（等旧进程退出）→ 旧进程退出；
 /// 新进程启动时删掉 .old。仓库需为公开，否则 API 返回 404。
 /// </summary>
@@ -136,11 +136,12 @@ public static class Updater
         }
     }
 
-    /// <summary>启动新版本（等本进程退出后再接管），调用方随后退出。</summary>
-    public static void Restart()
+    /// <summary>启动新版本（等本进程退出后再接管），调用方随后退出。主页面开着的话新版本也打开主页面。</summary>
+    public static void Restart(bool showMain)
     {
         var psi = new ProcessStartInfo(ExePath) { UseShellExecute = false };
-        foreach (var a in new[] { "--background", "--updated", "--wait-pid", Environment.ProcessId.ToString() }) psi.ArgumentList.Add(a);
+        if (!showMain) psi.ArgumentList.Add("--background");
+        foreach (var a in new[] { "--updated", "--wait-pid", Environment.ProcessId.ToString() }) psi.ArgumentList.Add(a);
         if (Environment.GetCommandLineArgs().Contains("--no-elevate")) psi.ArgumentList.Add("--no-elevate");
         // 当前是管理员进程时，子进程继承管理员权限，不会再弹 UAC
         Process.Start(psi);
