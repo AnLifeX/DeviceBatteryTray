@@ -55,7 +55,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         get => _demo;
         set
         {
-            if (_demo == value) return;
+            if (_demo == value || (value && !DemoData.Available)) return; // Release 版没有演示模式
             _demo = value;
             Log.W("演示模式：" + (value ? "开" : "关"));
             _demoUpdate = DemoUpdateAvailable;

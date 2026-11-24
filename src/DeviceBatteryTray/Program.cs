@@ -22,8 +22,10 @@ public static class Program
     ///   --restore-taskbar 还原任务栏（程序被强制结束后任务按钮区仍是缩窄的）
     ///   --dump out.txt   读一遍所有设备写出收发记录，并输出界面预览图
     ///   --no-elevate     不请求管理员权限
-    ///   --demo           演示模式：用模拟设备显示任务栏电量条、弹出面板和主页面
     ///   --wait-pid N     （自动更新内部用）等旧进程退出后再启动
+    /// 仅 Debug 编译（本地开发测试）：
+    ///   --demo           演示模式：用模拟设备显示任务栏电量条、弹出面板和主页面
+    ///   --demo-ui ...    用演示数据打开主页面 / 弹出面板，可渲染成图片
     /// </summary>
     [STAThread]
     static void Main(string[] args)
@@ -38,6 +40,7 @@ public static class Program
 
         if (args.Length == 2 && args[0] == "--dump") { Dump(args[1]); return; }
 
+#if DEBUG
         // 开发用：--demo-ui [home|settings|flyout] [light|dark] [out.png] 用演示数据打开主页面（不读设备、不挂任务栏）
         if (args.Length >= 1 && args[0] == "--demo-ui")
         {
@@ -68,6 +71,7 @@ public static class Program
             Application.Run();
             return;
         }
+#endif
 
         if (args.Contains("--restore-taskbar")) { TaskbarWidget.RestoreTaskbarLayout(); return; } // 程序异常退出后手动还原
 
@@ -112,7 +116,7 @@ public static class Program
         Application.ThreadException += (_, e) => Log.W("UI 线程异常: " + e.Exception);
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Log.W("未处理异常: " + e.ExceptionObject);
 
-        Application.Run(new TrayApp(CreateProviders(), showMain: !background, demo: args.Contains("--demo")));
+        Application.Run(new TrayApp(CreateProviders(), showMain: !background, demo: DemoData.Available && args.Contains("--demo")));
     }
 
     /// <summary>卸载前（此时程序已被 Velopack 结束）：还原任务栏，删除开机自启项和设置 / 日志。</summary>
@@ -246,7 +250,8 @@ public static class Program
         sheet.Save(Path.ChangeExtension(file, ".png"));
     }
 
-    /// <summary>--dump 预览用的演示数据。</summary>
+#if DEBUG
+    /// <summary>--demo-ui 用的演示数据。</summary>
     sealed class DemoModel : IAppModel
     {
         public IReadOnlyList<DeviceStatus> Devices => DeviceList.Build(DemoData.Raw)
@@ -266,4 +271,5 @@ public static class Program
         public void RestartElevated() { }
         public void Exit() { }
     }
+#endif
 }

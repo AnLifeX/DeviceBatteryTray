@@ -121,7 +121,8 @@
                 </ui:CardControl>
 
                 <ui:TextBlock Style="{StaticResource Section}" Text="其他" />
-                <ui:CardControl Icon="{ui:SymbolIcon Games24}">
+                <!-- 演示模式：只在 Debug 编译（本地开发测试）显示 -->
+                <ui:CardControl Icon="{ui:SymbolIcon Games24}" Visibility="{Binding DemoAvailable, Converter={StaticResource BoolToVis}}">
                     <ui:CardControl.Header>
                         <StackPanel>
                             <ui:TextBlock Text="演示模式" />

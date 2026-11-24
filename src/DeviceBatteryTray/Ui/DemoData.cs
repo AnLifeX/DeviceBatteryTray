@@ -8,6 +8,16 @@ namespace DeviceBatteryTray.Ui;
 /// </summary>
 public static class DemoData
 {
+    /// <summary>
+    /// 演示模式只给本地开发测试用：只有 Debug 编译才有入口（设置里的开关、--demo、--demo-ui），
+    /// 发布的 Release 版本里没有。
+    /// </summary>
+#if DEBUG
+    public const bool Available = true;
+#else
+    public const bool Available = false;
+#endif
+
     static int _keyboard = 73, _gamepad = 35, _mouse2 = 9;
 
     const string Vgn = "VGN V98Pro V2 键盘", Thunder = "雷神 ML903 mini 鼠标", GameSir = "盖世小鸡手柄", Flydigi = "飞智 黑武士 3 Pro";

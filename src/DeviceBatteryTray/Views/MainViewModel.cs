@@ -244,6 +244,8 @@ public sealed class MainViewModel : Observable
     public bool NoOnlineDevices => OnlineDevices.Count == 0;
     public string FlyoutUpdatedText => _m.Refreshing ? "正在刷新…" : _m.UpdatedAt is { } at ? $"{at:HH:mm} 更新" : "正在读取…";
 
+    /// <summary>设置里的演示模式开关只在 Debug 编译显示。</summary>
+    public bool DemoAvailable => DemoData.Available;
     public bool Demo
     {
         get => _m.Demo;
