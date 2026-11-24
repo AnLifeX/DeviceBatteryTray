@@ -4,7 +4,7 @@ using DeviceBatteryTray.Ui;
 
 namespace DeviceBatteryTray;
 
-/// <summary>用户设置：%LOCALAPPDATA%\DeviceBatteryTray\settings.json。</summary>
+/// <summary>用户设置：%APPDATA%\DeviceBatteryTray\settings.json。</summary>
 public sealed class AppSettings
 {
     /// <summary>电量刷新间隔（秒）。</summary>
@@ -30,9 +30,9 @@ public sealed class AppSettings
     public static readonly int[] UpdateCheckChoices = { 1, 6, 12, 24, 168 };
 
     static readonly string FilePath = Path.Combine(AppPaths.DataDir, "settings.json");
-    // 旧版本把设置放在 %APPDATA%（Roaming），读不到新位置时从这里迁移
+    // 有一个开发版本把设置放在了 %LOCALAPPDATA%\DeviceBatteryTray（现在是安装目录），读不到新位置时从这里迁移
     static readonly string OldFilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DeviceBatteryTray", "settings.json");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DeviceBatteryTray", "settings.json");
     static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
     public static AppSettings Current { get; private set; } = Load();
@@ -83,7 +83,7 @@ public sealed class AppSettings
         {
             Directory.CreateDirectory(AppPaths.DataDir);
             File.WriteAllText(FilePath, JsonSerializer.Serialize(s, Json));
-            Directory.Delete(Path.GetDirectoryName(OldFilePath)!, recursive: true);
+            File.Delete(OldFilePath); // 只删文件：那个目录可能是安装目录
         }
         catch { }
     }

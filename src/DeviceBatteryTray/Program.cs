@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using DeviceBatteryTray.Devices;
 using DeviceBatteryTray.Tray;
 using DeviceBatteryTray.Ui;
+using Velopack;
 
 namespace DeviceBatteryTray;
 
@@ -18,6 +19,7 @@ public static class Program
     ///   （无）            双击启动：常驻任务栏并打开主页面；已在运行则让它打开主页面
     ///   --background     开机自启用：只常驻任务栏，不打开主页面
     ///   --exit           让正在运行的实例退出
+    ///   --restore-taskbar 还原任务栏（程序被强制结束后任务按钮区仍是缩窄的）
     ///   --dump out.txt   读一遍所有设备写出收发记录，并输出界面预览图
     ///   --no-elevate     不请求管理员权限
     ///   --wait-pid N     （自动更新内部用）等旧进程退出后再启动
@@ -25,7 +27,16 @@ public static class Program
     [STAThread]
     static void Main(string[] args)
     {
+        // Velopack 必须最先运行：安装 / 更新 / 卸载时会用特殊参数启动本程序执行钩子，然后直接退出
+        // Velopack 在覆盖安装 / 卸载前会强制结束正在运行的本程序，来不及还原任务栏，所以在钩子里补上
+        VelopackApp.Build()
+            .OnAfterInstallFastCallback(_ => TaskbarWidget.RestoreTaskbarLayout())
+            .OnBeforeUninstallFastCallback(_ => OnUninstall())
+            .Run();
+
         if (args.Length == 2 && args[0] == "--dump") { Dump(args[1]); return; }
+
+        if (args.Contains("--restore-taskbar")) { TaskbarWidget.RestoreTaskbarLayout(); return; } // 程序异常退出后手动还原
 
         if (args.Contains("--exit"))
         {
@@ -63,13 +74,26 @@ public static class Program
         using var single = new Mutex(true, MutexName, out bool first);
         if (!first) return; // 只允许一个实例
 
-        Updater.CleanupOld();
         ApplicationConfiguration.Initialize();
         Log.W($"启动 v{Updater.CurrentText}，管理员={FlydigiVader.IsElevated()}，参数={string.Join(" ", args)}");
         Application.ThreadException += (_, e) => Log.W("UI 线程异常: " + e.Exception);
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Log.W("未处理异常: " + e.ExceptionObject);
 
         Application.Run(new TrayApp(CreateProviders(), showMain: !background, justUpdated: args.Contains("--updated")));
+    }
+
+    /// <summary>卸载前（此时程序已被 Velopack 结束）：还原任务栏，删除开机自启项和设置 / 日志。</summary>
+    static void OnUninstall()
+    {
+        try
+        {
+            if (EventWaitHandle.TryOpenExisting(ExitEventName, out var ev)) using (ev) ev.Set(); // 万一还在运行
+            for (int i = 0; i < 30 && SignalRunning(showMain: false); i++) Thread.Sleep(100);
+            TaskbarWidget.RestoreTaskbarLayout();
+            AutoStart.Enabled = false;
+            Directory.Delete(AppPaths.DataDir, recursive: true);
+        }
+        catch { }
     }
 
     /// <summary>已有实例在运行时返回 true；需要的话通知它打开主页面。</summary>
@@ -241,7 +265,7 @@ public static class Program
         public DateTime? UpdatedAt => new DateTime(2026, 11, 24, 14, 32, 5);
         public bool Refreshing => false;
         public UpdateState Update => Empty ? UpdateState.Idle
-            : new(UpdateStatus.Available, new UpdateInfo(new Version(0, 2, 0), "v0.2.0", "", 0, null, ""));
+            : new(UpdateStatus.Available, new AppUpdate(new Version(0, 2, 0), null!));
         public bool AutoStart { get => true; set { } }
         public bool Elevated => true;
         public event Action? Changed { add { } remove { } }

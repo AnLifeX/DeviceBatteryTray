@@ -59,50 +59,58 @@
 
 ## 使用
 
-从 [Releases](https://github.com/AnLifeX/DeviceBatteryTray/releases) 下载 `DeviceBatteryTray.exe` 直接运行（需要 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0)）。
+从 [Releases](https://github.com/AnLifeX/DeviceBatteryTray/releases) 下载：
+- **安装版** `DeviceBatteryTray-win-Setup.exe`：装到 `%LOCALAPPDATA%\DeviceBatteryTray`，不需要管理员权限；
+  缺 .NET 8 桌面运行时会自动安装；创建桌面和开始菜单快捷方式；可在「应用和功能」里卸载。
+- **便携版** `DeviceBatteryTray-win-Portable.zip`：解压到任意目录，运行 `设备电量.exe`
+  （需要自行安装 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0)）。
+
+两种都支持自动更新。
 
 - **任务栏电量条**：托盘区左侧显示每个**在线**设备的「设备图标 + 电池格 + 百分比」，多个设备两行排列；
   ≤ 40% 黄色、≤ 20% 红色、充电蓝色。休眠 / 未连接 / 不支持的设备不显示。跟随任务栏深浅色。
 - **弹出面板**：点击电量条弹出（Win11 风格，Win10 上同样是圆角 + 阴影）。显示在线设备和更新时间；
-  右上角刷新（面板不关闭，原地更新）；有新版本时显示提示；底部「设置」直达主页面的设置页，「退出」。点面板外或按 Esc 关闭。
-- **主页面**：双击 exe 打开（程序已在运行时也一样，会唤起已有实例），关闭主页面程序仍在后台运行。
-  - 「设备」页：全部支持的设备及状态（在线 / 休眠 / 未检测到接收器 / 需要管理员）。
-  - 「设置」页：开机自启、刷新间隔（默认 30 秒）、低电量提醒阈值（默认 20%）、主题（跟随系统 / 浅色 / 深色）、
-    读取飞智黑武士开关、自动更新开关和检查间隔、手动检查更新、打开日志。
-  - 设置和日志都在 `%LOCALAPPDATA%\DeviceBatteryTray\`（`settings.json`、`DeviceBatteryTray.log`）。
-- **自动更新**（可关闭，检查间隔可选 1 小时 ~ 每周，默认 6 小时）：启动 20 秒后及之后按间隔检查 GitHub 最新已发布的 Release
-  （需要仓库公开；草稿不算）。程序是便携的单个 exe，没有安装步骤：下载新 exe、校验 SHA-256、替换自己并重启。
-  只有单文件发布版支持自我更新。
+  右上角刷新（面板不关闭，原地更新）；有新版本时显示提示；底部「主页面」「设置」「退出」。点面板外或按 Esc 关闭。
+- **主页面**：双击程序打开（程序已在运行时也一样，会唤起已有实例），关闭主页面程序仍在后台运行。
+  - 「设备」页：接收器已插入的设备及状态（在线 / 休眠 / 需要管理员权限）。没插的不显示。
+  - 「设置」页（左下角）：开机自启、刷新间隔（默认 30 秒）、低电量提醒阈值（默认 20%）、读取飞智黑武士开关、
+    主题（跟随系统 / 浅色 / 深色）、自动更新开关和检查间隔、手动检查更新、打开日志。
+  - 设置和日志在 `%APPDATA%\DeviceBatteryTray\`（`settings.json`、`DeviceBatteryTray.log`）。
+- **自动更新**（可关闭；检查间隔 1 小时 ~ 每周，默认 6 小时）：启动 20 秒后及之后按间隔检查 GitHub 上已发布的 Release
+  （需要仓库公开；草稿不算）。由 Velopack 下载（优先增量包），程序退出后替换文件并自动重启。直接运行编译出的 exe 不支持更新。
+- **卸载**：会先还原任务栏，删除开机自启项和 `%APPDATA%\DeviceBatteryTray`。
 - **管理员权限**（仅为读取飞智黑武士）：
   - 只有「设置里开着读取黑武士 + 装了飞智空间站 + 插着黑武士接收器」时才请求，否则以普通权限运行、不弹 UAC。
   - 拒绝 UAC 的话照常运行，主页面黑武士卡片上有「以管理员身份重启」按钮；设置里关掉黑武士后永远不提权。
   - 打开「开机自启」后，会创建一个「最高权限」计划任务；之后开机自启和手动双击启动都**不再弹 UAC**。
 - 任务栏内嵌的做法与 TrafficMonitor 相同（缩窄任务按钮区、把窗口挂进任务栏），退出、注销、关机时自动还原。目前仅支持 Win10 横向任务栏；竖向任务栏时会改为显示一个托盘图标作为入口。
 
-命令行：
-- `DeviceBatteryTray.exe --background`：只常驻任务栏、不打开主页面（开机自启用的就是这个）
-- `DeviceBatteryTray.exe --exit`：让正在运行的实例正常退出
-- `DeviceBatteryTray.exe --dump out.txt`：读一遍所有设备写出原始收发记录，并用演示数据输出界面预览
+命令行（`current\DeviceBatteryTray.exe` 或便携版目录里的同名程序）：
+- `--background`：只常驻任务栏、不打开主页面（开机自启用的就是这个）
+- `--exit`：让正在运行的实例正常退出
+- `--restore-taskbar`：程序被强制结束后，任务按钮区还是缩窄的，用它还原
+- `--dump out.txt`：读一遍所有设备写出原始收发记录，并用演示数据输出界面预览
   `out.png`（任务栏条 + 面板）、`out-main-dark.png` / `out-main-light.png`（主页面）
-- `DeviceBatteryTray.exe --no-elevate`：不请求管理员权限
-- 运行日志：`%LOCALAPPDATA%\DeviceBatteryTray\DeviceBatteryTray.log`
+- `--no-elevate`：不请求管理员权限
 
 ## 编译与发布
 
 ```powershell
-dotnet publish src/DeviceBatteryTray -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o publish
+dotnet publish src/DeviceBatteryTray -c Release -r win-x64 --self-contained false -o publish
+dotnet tool restore   # 安装打包工具 vpk（Velopack，版本见 .config/dotnet-tools.json）
+dotnet vpk pack -u DeviceBatteryTray -v 0.1.0 -p publish -e DeviceBatteryTray.exe --packTitle 设备电量 -i src/DeviceBatteryTray/app.ico -f net8-x64-desktop
 ```
 
-CI（`.github/workflows/ci.yml`）：
-- 推送到 main / PR：编译程序和全部调试工具，exe 作为构建产物上传（版本号 `0.x.y-ci.N`）。
-- 推送 `vX.Y.Z` 标签：以该版本号编译并创建 GitHub Release，程序的自动更新从这里获取：
-  ```
-  git tag v0.2.0
-  git push origin v0.2.0
-  ```
-- 本地版本号前缀在 `DeviceBatteryTray.csproj` 的 `VersionPrefix`。
+CI（`.github/workflows/ci.yml`）只在推送 `vX.Y.Z` 标签时运行：编译、用 Velopack 打包（含相对上一已发布版本的增量包），
+创建**草稿** Release。确认后在 GitHub 上点「Publish release」，程序的自动更新才会看到它。不上传构建产物、不使用缓存。
+```
+git tag v0.2.0
+git push origin v0.2.0
+```
+本地版本号在 `DeviceBatteryTray.csproj` 的 `VersionPrefix`。
 
-测试更新流程：设置环境变量 `DEVICEBATTERYTRAY_UPDATE_API` 指向一个与 GitHub `releases/latest` 同格式的 JSON，即可用本地服务器模拟发布。
+测试更新流程：用 `vpk pack` 依次打包两个版本到同一个目录，安装旧版本后，设置环境变量
+`DEVICEBATTERYTRAY_UPDATE_DIR` 指向该目录再启动程序，就会从本地目录更新。
 
 程序图标 `app.ico` 由 `tools/IconGen` 生成：`dotnet run --project tools/IconGen -- src/DeviceBatteryTray/app.ico preview.png`
 
@@ -113,7 +121,7 @@ CI（`.github/workflows/ci.yml`）：
   - `Devices/` 各设备的电量读取
   - `Tray/` 任务栏内嵌条、弹出面板、主逻辑
   - `Ui/` 主页面、主题配色与绘制工具、下拉菜单、程序图标
-  - `AppSettings.cs` 设置，`AutoStart.cs` 开机自启，`Updater.cs` 自动更新
+  - `AppSettings.cs` 设置，`AutoStart.cs` 开机自启，`Updater.cs` 自动更新（Velopack）
 - `tools/HidProbe/` HID 调试工具：列接口（含 Report ID）/ 发包 / 被动监听 / 读 Feature
 - `tools/GameSirProbe/` 32 位，调用盖世小鸡 SDK 并截获其 HID 收发
 - `tools/FlydigiProbe/` 经飞智过滤驱动查询黑武士（需管理员）

@@ -30,7 +30,6 @@ public sealed class TrayApp : ApplicationContext, IAppModel
     private int _polling;
     private bool? _autoStart;
     private int _updateHours = AppSettings.Current.UpdateCheckHours;
-    private Version? _notifiedVersion;
     private Action? _balloonClick;
 
     public event Action? Changed;
@@ -230,24 +229,18 @@ public sealed class TrayApp : ApplicationContext, IAppModel
 
     private async void CheckUpdate(bool manual)
     {
-        if (!manual && !AppSettings.Current.AutoUpdate) return;
+        if (!manual && (!AppSettings.Current.AutoUpdate || !Updater.CanSelfUpdate)) return; // 开发版本不自动检查
         if (Update.Status is UpdateStatus.Checking or UpdateStatus.Downloading) return;
         SetUpdate(new UpdateState(UpdateStatus.Checking));
         try
         {
             var info = await Updater.CheckAsync();
-            Log.W($"检查更新：当前 {Updater.CurrentText}，最新 {(info == null ? "无更新" : info.Tag)}");
+            Log.W($"检查更新：当前 {Updater.CurrentText}，最新 {(info == null ? "无更新" : "v" + info.Version)}");
             if (info == null) { SetUpdate(new UpdateState(UpdateStatus.UpToDate)); return; }
             SetUpdate(new UpdateState(UpdateStatus.Available, info));
             if (manual) return;
 
-            // 自动更新：直接下载替换并重启；开发版本不能自我替换，只提醒
-            if (Updater.CanSelfUpdate) InstallUpdate();
-            else if (_notifiedVersion != info.Version)
-            {
-                _notifiedVersion = info.Version;
-                Notify("发现新版本", $"设备电量 v{info.Version} 可以更新了，点击查看", ToolTipIcon.Info, () => ShowMain(MainPage.Settings));
-            }
+            InstallUpdate(); // 自动更新：下载后替换并重启
         }
         catch (Exception e)
         {
@@ -262,9 +255,9 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         SetUpdate(new UpdateState(UpdateStatus.Downloading, info));
         try
         {
-            await Updater.InstallAsync(info, new Progress<int>(p => SetUpdate(new UpdateState(UpdateStatus.Downloading, info, p))));
-            Log.W($"已下载 {info.Tag}，重启");
-            Updater.Restart(showMain: _main is { Visible: true });
+            await Updater.DownloadAsync(info, new Progress<int>(p => SetUpdate(new UpdateState(UpdateStatus.Downloading, info, p))));
+            Log.W($"已下载 v{info.Version}，退出后由更新程序替换并重启");
+            Updater.ApplyAndRestart(info, showMain: _main is { Visible: true });
             ExitThread();
         }
         catch (Exception e)

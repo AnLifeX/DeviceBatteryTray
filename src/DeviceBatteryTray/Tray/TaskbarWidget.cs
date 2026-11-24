@@ -97,6 +97,23 @@ public sealed class TaskbarWidget : Form
         SetWindowPos(Handle, HWND_TOP, rebarW - _width, 0, _width, rb.Bottom - rb.Top, SWP_NOACTIVATE | SWP_SHOWWINDOW);
     }
 
+    /// <summary>
+    /// 不依赖实例的任务栏还原：程序被强制结束（如 Velopack 安装 / 卸载前会结束进程）后，
+    /// 任务按钮区仍是缩窄的宽度。它的左边位置没被改过，把宽度撑满到 rebar 右侧即可。
+    /// </summary>
+    public static void RestoreTaskbarLayout()
+    {
+        var tray = FindWindow("Shell_TrayWnd", null);
+        var rebar = FindWindowEx(tray, IntPtr.Zero, "ReBarWindow32", null);
+        var taskSw = FindWindowEx(rebar, IntPtr.Zero, "MSTaskSwWClass", null);
+        if (rebar == IntPtr.Zero || taskSw == IntPtr.Zero) return;
+        GetWindowRect(rebar, out var rb);
+        GetWindowRect(taskSw, out var ts);
+        if (rb.Bottom - rb.Top > rb.Right - rb.Left) return; // 竖向任务栏没有改过
+        int left = ts.Left - rb.Left;
+        MoveWindow(taskSw, left, 0, rb.Right - rb.Left - left, rb.Bottom - rb.Top, true);
+    }
+
     public void Detach()
     {
         _guard.Stop();

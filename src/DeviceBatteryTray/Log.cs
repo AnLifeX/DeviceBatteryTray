@@ -1,13 +1,17 @@
 namespace DeviceBatteryTray;
 
-/// <summary>程序数据目录：%LOCALAPPDATA%\DeviceBatteryTray（设置、日志都放这里，不放临时目录）。</summary>
+/// <summary>
+/// 程序数据目录：%APPDATA%\DeviceBatteryTray（设置、日志）。
+/// 不能用 %LOCALAPPDATA%\DeviceBatteryTray：那是 Velopack 的安装目录，安装 / 卸载时会被整个清空。
+/// 卸载时由 Program.OnUninstall 删除。
+/// </summary>
 public static class AppPaths
 {
     public static readonly string DataDir =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DeviceBatteryTray");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DeviceBatteryTray");
 }
 
-/// <summary>运行日志：%LOCALAPPDATA%\DeviceBatteryTray\DeviceBatteryTray.log（超过 1MB 时转存为 .log.1）。</summary>
+/// <summary>运行日志：%APPDATA%\DeviceBatteryTray\DeviceBatteryTray.log（超过 1MB 时转存为 .log.1）。</summary>
 public static class Log
 {
     public static readonly string FilePath = Path.Combine(AppPaths.DataDir, "DeviceBatteryTray.log");
