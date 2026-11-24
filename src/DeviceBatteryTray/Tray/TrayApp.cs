@@ -166,6 +166,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
                 _ui.Post(_ =>
                 {
                     _raw = results;
+                    DeviceList.MigrateMovedDevices(results);
                     UpdatedAt = DateTime.Now;
                     Refreshing = false;
                     RefreshWidget();

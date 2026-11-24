@@ -32,6 +32,14 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         Icon = TitleIcon.Source;
 
         ViewModel.NavigateRequested += p => Page = p;
+        ViewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is null or nameof(MainViewModel.AboutOpen)) ShowAbout(ViewModel.AboutOpen);
+        };
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == System.Windows.Input.Key.Escape && ViewModel.AboutOpen) { ViewModel.AboutOpen = false; e.Handled = true; }
+        };
         _m.Changed += OnModelChanged;
         AppSettings.Changed += OnSettingsChanged;
         _tick.Tick += (_, _) => ViewModel?.Tick();
@@ -63,16 +71,14 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     private DevicesPage? _devices;
     private SettingsPage? _settings;
-    private AboutPage? _about;
 
-    /// <summary>切换页面：进设置 / 关于从右侧滑入，返回从左侧滑入（淡入 + 位移 24px，ease-out）。</summary>
+    /// <summary>切换页面：进设置从右侧滑入，返回从左侧滑入（淡入 + 位移 24px，ease-out）。</summary>
     void Navigate(MainPage page)
     {
         bool forward = page != MainPage.Home;
         object next = page switch
         {
             MainPage.Settings => _settings ??= new SettingsPage(),
-            MainPage.About => _about ??= new AboutPage(),
             _ => _devices ??= new DevicesPage(),
         };
         if (ReferenceEquals(Host.Content, next)) return;
@@ -94,6 +100,25 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         WpfHost.ApplyTheme();
         ViewModel?.Sync();
     }
+
+    private bool _aboutShown;
+
+    /// <summary>关于框：遮罩淡入 + 卡片从 96% 放大到 100%（关闭反向，结束后收起）。</summary>
+    void ShowAbout(bool open)
+    {
+        if (open == _aboutShown) return;
+        _aboutShown = open;
+        var ease = new System.Windows.Media.Animation.CubicEase { EasingMode = open ? System.Windows.Media.Animation.EasingMode.EaseOut : System.Windows.Media.Animation.EasingMode.EaseIn };
+        var dur = TimeSpan.FromMilliseconds(open ? 200 : 130);
+        if (open) AboutOverlay.Visibility = System.Windows.Visibility.Visible;
+        var fade = new System.Windows.Media.Animation.DoubleAnimation(open ? 1 : 0, dur);
+        if (!open) fade.Completed += (_, _) => { if (!_aboutShown) AboutOverlay.Visibility = System.Windows.Visibility.Collapsed; };
+        AboutOverlay.BeginAnimation(OpacityProperty, fade);
+        foreach (var dp in new[] { System.Windows.Media.ScaleTransform.ScaleXProperty, System.Windows.Media.ScaleTransform.ScaleYProperty })
+            AboutScale.BeginAnimation(dp, new System.Windows.Media.Animation.DoubleAnimation(open ? 0.96 : 1, open ? 1 : 0.96, dur) { EasingFunction = ease });
+    }
+
+    void AboutBackdrop_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => ViewModel!.AboutOpen = false;
 
     static BitmapSource LoadIcon()
     {

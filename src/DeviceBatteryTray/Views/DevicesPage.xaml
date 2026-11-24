@@ -92,18 +92,9 @@
                         </ui:SymbolIcon.Style>
                     </ui:SymbolIcon>
                 </ui:Button>
-                <ui:DropDownButton Appearance="Transparent" Padding="8" Margin="4,0,0,0" ToolTip="主题">
-                    <ui:DropDownButton.Content>
-                        <ui:SymbolIcon Symbol="{Binding ThemeSymbol}" FontSize="18" />
-                    </ui:DropDownButton.Content>
-                    <ui:DropDownButton.Flyout>
-                        <ContextMenu>
-                            <MenuItem Header="跟随系统" Command="{Binding ThemeSystemCommand}" IsCheckable="False" IsChecked="{Binding ThemeIsSystem, Mode=OneWay}" />
-                            <MenuItem Header="浅色" Command="{Binding ThemeLightCommand}" IsCheckable="False" IsChecked="{Binding ThemeIsLight, Mode=OneWay}" />
-                            <MenuItem Header="深色" Command="{Binding ThemeDarkCommand}" IsCheckable="False" IsChecked="{Binding ThemeIsDark, Mode=OneWay}" />
-                        </ContextMenu>
-                    </ui:DropDownButton.Flyout>
-                </ui:DropDownButton>
+                <ui:Button Style="{StaticResource HeaderButton}" Command="{Binding ToggleThemeCommand}" ToolTip="{Binding ThemeTip}">
+                    <ui:SymbolIcon Symbol="{Binding ThemeSymbol}" FontSize="18" />
+                </ui:Button>
                 <ui:Button Style="{StaticResource HeaderButton}" Command="{Binding ShowAboutCommand}" ToolTip="关于">
                     <ui:SymbolIcon Symbol="Info24" FontSize="18" />
                 </ui:Button>

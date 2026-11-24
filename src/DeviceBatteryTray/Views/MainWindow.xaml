@@ -25,5 +25,39 @@
                 <TranslateTransform x:Name="HostShift" />
             </ContentControl.RenderTransform>
         </ContentControl>
+
+        <!-- 关于（模态框）：遮罩 + 居中卡片；Esc / 点遮罩 / 关闭按钮都能关 -->
+        <Grid x:Name="AboutOverlay" Grid.Row="1" Visibility="Collapsed" Opacity="0">
+            <Rectangle Fill="#66000000" MouseLeftButtonUp="AboutBackdrop_Click" />
+            <Border x:Name="AboutCard" Width="320" HorizontalAlignment="Center" VerticalAlignment="Center" CornerRadius="8" Padding="28,24"
+                    Background="{DynamicResource ApplicationBackgroundBrush}" BorderBrush="{DynamicResource SurfaceStrokeColorFlyoutBrush}" BorderThickness="1"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <ScaleTransform x:Name="AboutScale" />
+                </Border.RenderTransform>
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="28" ShadowDepth="6" Direction="270" Opacity="0.35" />
+                </Border.Effect>
+                <Grid>
+                    <ui:Button Command="{Binding CloseAboutCommand}" Appearance="Transparent" BorderThickness="0" Padding="6"
+                               HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-12,-16,0" ToolTip="关闭">
+                        <ui:SymbolIcon Symbol="Dismiss24" FontSize="14" />
+                    </ui:Button>
+                    <StackPanel>
+                        <Image Source="{Binding AppIconImage}" Width="72" Height="72" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <ui:TextBlock FontTypography="Subtitle" Text="设备电量" HorizontalAlignment="Center" Margin="0,12,0,0" />
+                        <ui:TextBlock Text="{Binding Version}" HorizontalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <ui:TextBlock Text="{Binding Description}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,14,0,0"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <!-- GitHub 项目地址：只放图标 -->
+                        <ui:Button Command="{Binding OpenRepoCommand}" Appearance="Transparent" Padding="8" HorizontalAlignment="Center"
+                                   Margin="0,16,0,0" ToolTip="GitHub 项目主页">
+                            <Path Width="22" Height="22" Stretch="Uniform" Fill="{DynamicResource TextFillColorPrimaryBrush}"
+                                  Data="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                        </ui:Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </ui:FluentWindow>

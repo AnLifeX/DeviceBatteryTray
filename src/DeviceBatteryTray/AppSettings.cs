@@ -31,6 +31,9 @@ public sealed class AppSettings
     /// <summary>用户给设备起的名字（设备 ID → 名称），用来区分同型号的多台设备。</summary>
     public Dictionary<string, string> DeviceNames { get; set; } = new();
 
+    /// <summary>出现过的设备 ID（判断「换了 USB 口的老设备」还是「本来就在的另一台」用）。</summary>
+    public List<string> SeenDevices { get; set; } = new();
+
     public static readonly int[] RefreshChoices = { 10, 30, 60, 120, 300 };
     public static readonly int[] LowBatteryChoices = { 0, 10, 15, 20, 30 };
     public static readonly int[] UpdateCheckChoices = { 1, 6, 12, 24, 168 };
@@ -101,10 +104,10 @@ public sealed class AppSettings
         UpdateCheckHours = Math.Clamp(UpdateCheckHours, 1, 24 * 30);
         HiddenDevices ??= new();
         DeviceNames ??= new();
+        SeenDevices ??= new();
     }
 
     public static string RefreshText(int sec) => sec < 60 ? $"{sec} 秒" : $"{sec / 60} 分钟";
     public static string LowBatteryText(int p) => p == 0 ? "不提醒" : $"低于 {p}%";
-    public static string ThemeText(ThemeMode m) => m switch { ThemeMode.Light => "浅色", ThemeMode.Dark => "深色", _ => "跟随系统" };
     public static string UpdateCheckText(int h) => h switch { < 24 => $"每 {h} 小时", 24 => "每天", 168 => "每周", _ => $"每 {h / 24} 天" };
 }

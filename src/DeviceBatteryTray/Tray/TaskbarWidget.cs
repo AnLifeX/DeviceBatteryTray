@@ -46,6 +46,16 @@ public sealed class TaskbarWidget : Form
 
     protected override bool ShowWithoutActivation => true;
 
+    /// <summary>
+    /// 右键也用来打开面板：子窗口没处理的 WM_CONTEXTMENU 会被转给父窗口（任务栏），弹出任务栏自己的右键菜单
+    /// 并抢走焦点，所以这里吞掉它。左右键的 MouseUp 都会触发 Clicked。
+    /// </summary>
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == 0x007B /*WM_CONTEXTMENU*/) return;
+        base.WndProc(ref m);
+    }
+
     /// <summary>更新显示；返回内嵌条此刻是否真的显示在任务栏上。</summary>
     public bool Update(List<Item> items)
     {

@@ -161,10 +161,10 @@ public sealed class MainViewModel : Observable
         ExitCommand = new RelayCommand(() => { CloseRequested?.Invoke(); _m.Exit(); });
         ExitDemoCommand = new RelayCommand(() => _m.Demo = false);
         BackCommand = new RelayCommand(() => NavigateRequested?.Invoke(MainPage.Home));
-        ShowAboutCommand = new RelayCommand(() => NavigateRequested?.Invoke(MainPage.About));
-        ThemeSystemCommand = new RelayCommand(() => AppSettings.Change(s => s.Theme = ThemeMode.System));
-        ThemeLightCommand = new RelayCommand(() => AppSettings.Change(s => s.Theme = ThemeMode.Light));
-        ThemeDarkCommand = new RelayCommand(() => AppSettings.Change(s => s.Theme = ThemeMode.Dark));
+        ShowAboutCommand = new RelayCommand(() => AboutOpen = true);
+        CloseAboutCommand = new RelayCommand(() => AboutOpen = false);
+        // 浅色 ↔ 深色（从「跟随系统」第一次点击时，切到和当前相反的颜色）
+        ToggleThemeCommand = new RelayCommand(() => AppSettings.Change(s => s.Theme = Ui.Theme.Current.Dark ? ThemeMode.Light : ThemeMode.Dark));
         Sync();
     }
 
@@ -189,9 +189,14 @@ public sealed class MainViewModel : Observable
     public event Action? CloseRequested;
     public ICommand BackCommand { get; }
     public ICommand ShowAboutCommand { get; }
-    public ICommand ThemeSystemCommand { get; }
-    public ICommand ThemeLightCommand { get; }
-    public ICommand ThemeDarkCommand { get; }
+    public ICommand CloseAboutCommand { get; }
+    public ICommand ToggleThemeCommand { get; }
+
+    private bool _aboutOpen;
+
+    /// <summary>关于框（主页面上的模态框）是否打开。</summary>
+    public bool AboutOpen { get => _aboutOpen; set => Set(ref _aboutOpen, value); }
+
 
     /// <summary>页面切换请求（由主窗口处理动画）。</summary>
     public event Action<MainPage>? NavigateRequested;
@@ -205,7 +210,7 @@ public sealed class MainViewModel : Observable
         var all = _m.Devices;
         SyncList(Devices, all.Where(d => d.Reading is { State: not ReadState.NotFound }).ToList());
         SyncList(OnlineDevices, all.Where(d => d.Shown).ToList());
-        SupportedText = "支持：" + string.Join("、", all.Select(d => d.Model).Where(m => m.Length > 0).Distinct());
+        SupportedText = "支持：" + string.Join("、", Providers.Models);
         if (!_m.Refreshing && DateTime.Now >= _spinUntil) Spinning = false;
         else if (_m.Refreshing) Spinning = true;
         RaiseAll();
@@ -259,20 +264,14 @@ public sealed class MainViewModel : Observable
 
     public string Version => "v" + Updater.CurrentText;
 
-    /// <summary>主题按钮上的图标：跟随系统 / 浅色（太阳）/ 深色（月亮）。</summary>
-    public Wpf.Ui.Controls.SymbolRegular ThemeSymbol => AppSettings.Current.Theme switch
-    {
-        ThemeMode.Light => Wpf.Ui.Controls.SymbolRegular.WeatherSunny24,
-        ThemeMode.Dark => Wpf.Ui.Controls.SymbolRegular.WeatherMoon24,
-        _ => Wpf.Ui.Controls.SymbolRegular.DarkTheme24,
-    };
-    public bool ThemeIsSystem => AppSettings.Current.Theme == ThemeMode.System;
-    public bool ThemeIsLight => AppSettings.Current.Theme == ThemeMode.Light;
-    public bool ThemeIsDark => AppSettings.Current.Theme == ThemeMode.Dark;
+    /// <summary>主题按钮：图标表示当前颜色（太阳 = 浅色，月亮 = 深色），点一下切换。</summary>
+    public Wpf.Ui.Controls.SymbolRegular ThemeSymbol => Ui.Theme.Current.Dark
+        ? Wpf.Ui.Controls.SymbolRegular.WeatherMoon24 : Wpf.Ui.Controls.SymbolRegular.WeatherSunny24;
+    public string ThemeTip => Ui.Theme.Current.Dark ? "深色（点击切换到浅色）" : "浅色（点击切换到深色）";
 
     /// <summary>关于页用的大图标。</summary>
     public System.Windows.Media.ImageSource? AppIconImage => MainWindow.AppIconSource;
-    public string Description => "在 Windows 任务栏上显示无线键盘、鼠标、手柄的电量。直接和接收器通讯，不需要安装各家的驱动软件。";
+    public string Description => "在任务栏上查看无线键盘、鼠标、手柄的电量，不需要安装各家驱动。";
 
     public bool AutoStart
     {
@@ -305,13 +304,6 @@ public sealed class MainViewModel : Observable
     public string FlydigiDescription => !AppSettings.Current.ReadFlydigi ? "已关闭，程序不会请求管理员权限"
         : _m.Elevated ? "需要管理员权限（当前已是管理员）" : "需要管理员权限，只在检测到黑武士接收器时才请求";
 
-    public IReadOnlyList<Choice> ThemeChoices { get; } =
-        Enum.GetValues<ThemeMode>().Select(v => new Choice(AppSettings.ThemeText(v), v)).ToList();
-    public object Theme
-    {
-        get => AppSettings.Current.Theme;
-        set { if (value is ThemeMode v) AppSettings.Change(s => s.Theme = v); }
-    }
 
     public bool AutoUpdate
     {

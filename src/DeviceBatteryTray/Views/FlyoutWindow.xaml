@@ -41,9 +41,50 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="FooterButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+        <!-- 面板里所有按钮：透明底，悬停 / 按下有背景色，按下时轻微缩小（80ms），松开回弹（150ms） -->
+        <Style x:Key="FlyoutButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
             <Setter Property="Appearance" Value="Transparent" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="MouseOverBackground" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="MouseOverBorderBrush" Value="Transparent" />
+            <Setter Property="PressedBackground" Value="{DynamicResource SubtleFillColorTertiaryBrush}" />
+            <Setter Property="PressedBorderBrush" Value="Transparent" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform />
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsPressed" Value="True">
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX" To="0.97" Duration="0:0:0.08" />
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY" To="0.97" Duration="0:0:0.08" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX" To="1" Duration="0:0:0.15">
+                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY" To="1" Duration="0:0:0.15">
+                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.ExitActions>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="FooterButton" TargetType="ui:Button" BasedOn="{StaticResource FlyoutButton}">
             <Setter Property="Padding" Value="10,7" />
         </Style>
     </Window.Resources>
@@ -78,8 +119,8 @@
                     </StackPanel>
                     <ui:TextBlock FontTypography="Caption" Text="{Binding FlyoutUpdatedText}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
-                <ui:Button HorizontalAlignment="Right" VerticalAlignment="Center" Command="{Binding RefreshCommand}"
-                           Appearance="Transparent" BorderThickness="0" Padding="8" ToolTip="刷新">
+                <ui:Button Style="{StaticResource FlyoutButton}" HorizontalAlignment="Right" VerticalAlignment="Center" Command="{Binding RefreshCommand}"
+                           Padding="8" ToolTip="刷新">
                     <ui:SymbolIcon Symbol="ArrowClockwise24" FontSize="16" RenderTransformOrigin="0.5,0.5">
                         <ui:SymbolIcon.RenderTransform>
                             <RotateTransform />
@@ -108,7 +149,7 @@
             </Grid>
 
             <!-- 新版本 -->
-            <ui:Button Grid.Row="1" Margin="12,0,12,6" Padding="12,9" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+            <ui:Button Grid.Row="1" Style="{StaticResource FlyoutButton}" Margin="12,0,12,6" Padding="12,9" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                        Command="{Binding OpenSettingsCommand}" Visibility="{Binding UpdateBannerOpen, Converter={StaticResource BoolToVis}}"
                        Background="{DynamicResource InfoBarInformationalSeverityBackgroundBrush}" BorderThickness="0">
                 <Grid>
@@ -127,7 +168,7 @@
                 <ItemsControl ItemsSource="{Binding OnlineDevices}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type local:DeviceItem}">
-                            <ui:Button Appearance="Transparent" BorderThickness="0" Padding="12,10" Margin="0,1"
+                            <ui:Button Style="{StaticResource FlyoutButton}" Padding="12,6" Margin="0,1"
                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                                        Command="{Binding DataContext.OpenMainCommand, RelativeSource={RelativeSource AncestorType=Window}}">
                                 <Grid MinHeight="38"><!-- 每行等高，不管有没有「充电中」之类的备注 -->

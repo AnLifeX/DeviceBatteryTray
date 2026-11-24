@@ -14,7 +14,7 @@ public sealed record DeviceStatus(string Id, DeviceKind Kind, string Name, Batte
     public bool Shown => Online && Visible;
 }
 
-public enum MainPage { Home, Settings, About }
+public enum MainPage { Home, Settings }
 
 /// <summary>面板和主页面看到的程序状态与操作（TrayApp 实现；--dump 预览用演示数据实现）。</summary>
 public interface IAppModel

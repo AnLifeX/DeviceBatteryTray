@@ -54,8 +54,8 @@ public static class Program
             }
             else
             {
-                w = new Views.MainWindow(new DemoModel(), args.Length < 2 ? MainPage.Home
-                    : args[1] == "settings" ? MainPage.Settings : args[1] == "about" ? MainPage.About : MainPage.Home);
+                w = new Views.MainWindow(new DemoModel(), args.Length > 1 && args[1] == "settings" ? MainPage.Settings : MainPage.Home);
+                if (args.Length > 1 && args[1] == "about") Views.MainWindow.ViewModel!.AboutOpen = true;
                 Views.WpfHost.Show(w);
             }
             w.Closed += (_, _) => Application.Exit();
@@ -201,14 +201,7 @@ public static class Program
         catch (System.ComponentModel.Win32Exception) { return false; } // 用户取消了 UAC
     }
 
-    static List<BatteryProvider> CreateProviders() => new()
-        {
-            new VgnKeyboard(),
-            new ThunderobotMouse(),
-            new GameSirDongle(),
-            new FlydigiVader(),
-            // 漫步者 HECATE G2（35BB:A209）协议未知，暂不加入，见 docs/protocols/edifier-hecate-g2.md
-        };
+    static List<BatteryProvider> CreateProviders() => Providers.Create();
 
     [DllImport("user32.dll")] static extern bool AllowSetForegroundWindow(int pid);
 
