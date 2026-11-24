@@ -19,19 +19,48 @@ public sealed record BatteryReading(ReadState State, int Percent = 0, bool Charg
     public static BatteryReading Fail(string why) => new(ReadState.Error, Detail: why);
 }
 
+/// <summary>同一型号下的一台设备：Key 区分同型号的多个接收器（只有一种接收器 / 没插时为空）。</summary>
+public sealed record DeviceReading(string Key, BatteryReading Reading);
+
 public abstract class BatteryProvider
 {
     public abstract string Id { get; }
     public abstract string DisplayName { get; }
     public abstract DeviceKind Kind { get; }
 
-    public abstract BatteryReading Read();
+    /// <summary>读一台设备（只支持单个接收器的型号实现这个即可）。</summary>
+    public virtual BatteryReading Read() => ReadAll().FirstOrDefault()?.Reading ?? BatteryReading.NotFound;
 
-    /// <summary>找到指定 VID/PID 下 UsagePage 匹配、可写的接口并打开。</summary>
-    protected static HidConnection? OpenVendorInterface(ushort vid, ushort pid, ushort usagePage)
+    /// <summary>
+    /// 读这个型号的所有设备（插了几个同型号接收器就返回几项）。一个都没插时返回一项 Key 为空的 NotFound，
+    /// 让界面知道支持这个型号。默认实现只读一台。
+    /// </summary>
+    public virtual IReadOnlyList<DeviceReading> ReadAll() => new[] { new DeviceReading("", Read()) };
+
+    /// <summary>
+    /// 对 VID/PID 下 UsagePage 匹配、可写的每个接口（每个对应一个接收器）执行 read；
+    /// 一个都没有时返回 NotFound（接收器在但接口打不开时返回失败）。
+    /// </summary>
+    protected static IReadOnlyList<DeviceReading> ReadEachReceiver(ushort vid, ushort[] pids, ushort usagePage, Func<HidConnection, BatteryReading> read)
     {
-        var target = HidEnumerator.Find(vid, pid).FirstOrDefault(i => i.UsagePage == usagePage && i.OutputLength > 0);
-        return target == null ? null : HidConnection.Open(target);
+        foreach (var pid in pids) // 多个 PID 时按优先级：前面的 PID 有设备就不再看后面的
+        {
+            var all = HidEnumerator.Find(vid, pid);
+            var targets = all.Where(i => i.UsagePage == usagePage && i.OutputLength > 0).ToList();
+            if (targets.Count == 0)
+            {
+                if (all.Count > 0) return new[] { new DeviceReading("", BatteryReading.Fail("打不开厂商接口")) };
+                continue;
+            }
+            var list = new List<DeviceReading>();
+            foreach (var t in targets)
+            {
+                using var c = HidConnection.Open(t);
+                list.Add(new DeviceReading(t.InstanceKey, c == null ? BatteryReading.Fail("打不开厂商接口") : read(c)));
+            }
+            return list;
+        }
+        return new[] { new DeviceReading("", BatteryReading.NotFound) };
     }
 
     protected static bool Present(ushort vid, ushort pid) => HidEnumerator.Find(vid, pid).Count > 0;

@@ -145,15 +145,20 @@ public sealed class TaskbarWidget : Form
         Push(bmp);
     }
 
+    /// <summary>任务栏上最多显示的格数（两行四列）；设备更多时最后一格显示「+N」，完整列表看弹出面板。</summary>
+    public const int MaxCells = 8;
+
     /// <summary>画出内嵌条位图（高度 = 任务栏高度）。也用于 --dump 预览。</summary>
     public static Bitmap Render(List<Item> shown, int h, Color fore)
     {
+        int more = shown.Count > MaxCells ? shown.Count - (MaxCells - 1) : 0;
+        int cells = Math.Min(shown.Count, MaxCells);
         float scale = h / 40f; // Win10 100% 缩放时任务栏高 40px
 
         using var glyphFont = new Font(Glyphs.FontName, 14f * scale, GraphicsUnit.Pixel);
         using var textFont = new Font("Segoe UI", 12f * scale, FontStyle.Regular, GraphicsUnit.Pixel);
 
-        bool twoRows = shown.Count > 1;
+        bool twoRows = cells > 1;
         int rows = twoRows ? 2 : 1;
         float rowH = h / (float)rows;
         float gap = 3 * scale, cellPad = 10 * scale, edge = 6 * scale;
@@ -165,7 +170,7 @@ public sealed class TaskbarWidget : Form
         float TextW(string s) => mg.MeasureString(s, textFont, PointF.Empty, StringFormat.GenericTypographic).Width;
         float textMax = TextW("100%");
         float cellW = glyphW + gap + battW + gap + textMax + 4 * scale;
-        int cols = (shown.Count + rows - 1) / rows;
+        int cols = (cells + rows - 1) / rows;
         int width = (int)Math.Ceiling(edge * 2 + cols * cellW + (cols - 1) * cellPad);
 
         var bmp = new Bitmap(width, h, PixelFormat.Format32bppArgb);
@@ -175,12 +180,18 @@ public sealed class TaskbarWidget : Form
             g.Clear(Color.FromArgb(1, 0, 0, 0)); // alpha=1：几乎透明，但能接收鼠标点击
             var center = new StringFormat(StringFormat.GenericTypographic) { LineAlignment = StringAlignment.Center, FormatFlags = StringFormatFlags.NoWrap };
 
-            for (int i = 0; i < shown.Count; i++)
+            for (int i = 0; i < cells; i++)
             {
                 var it = shown[i];
                 int col = i / rows, row = i % rows;
                 float x = edge + col * (cellW + cellPad);
                 var line = new RectangleF(x, row * rowH, cellW, rowH);
+                if (more > 0 && i == cells - 1)
+                {
+                    using var moreBrush = new SolidBrush(Color.FromArgb(200, fore));
+                    g.DrawString($"+{more} 台", textFont, moreBrush, line with { X = x + 2 * scale }, center);
+                    continue;
+                }
                 var accent = Glyphs.Accent(it.Reading, fore);
                 bool dim = it.Reading.State != ReadState.Ok;
 

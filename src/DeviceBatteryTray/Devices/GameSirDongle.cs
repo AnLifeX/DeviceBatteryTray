@@ -9,11 +9,10 @@ public sealed class GameSirDongle : BatteryProvider
     public override string DisplayName => "盖世小鸡手柄";
     public override DeviceKind Kind => DeviceKind.Gamepad;
 
-    public override BatteryReading Read()
-    {
-        using var c = OpenVendorInterface(Vid, Pid, UsagePage);
-        if (c == null) return Present(Vid, Pid) ? BatteryReading.Fail("打不开厂商接口") : BatteryReading.NotFound;
+    public override IReadOnlyList<DeviceReading> ReadAll() => ReadEachReceiver(Vid, new[] { Pid }, UsagePage, ReadOne);
 
+    static BatteryReading ReadOne(Hid.HidConnection c)
+    {
         // 接收器在这个接口上持续推送全 0 的 06 包，只认 06 0E 0A 01 开头的设备信息应答
         var rx = c.Request(new byte[] { 0x07, 0x03, 0x0A, 0x01 },
             b => b[0] == 0x06 && b[1] == 0x0E && b[2] == 0x0A && b[3] == 0x01, timeoutMs: 1500);

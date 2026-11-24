@@ -5,7 +5,24 @@ namespace DeviceBatteryTray.Hid;
 
 /// <summary>一个 HID collection（Windows 上每个 top-level collection 是一个独立的设备路径）。</summary>
 public sealed record HidInterface(string Path, ushort Vid, ushort Pid, ushort UsagePage, ushort Usage,
-                                  int InputLength, int OutputLength, int FeatureLength, string Product);
+                                  int InputLength, int OutputLength, int FeatureLength, string Product, string Serial = "")
+{
+    /// <summary>
+    /// 区分同型号多个接收器的稳定标识：优先用 HID 序列号；没有序列号时用设备路径里的实例段
+    /// （和插在哪个 USB 口有关，换口会变），取 8 位哈希。
+    /// </summary>
+    public string InstanceKey
+    {
+        get
+        {
+            if (Serial.Length > 0) return "sn-" + Serial;
+            var parts = Path.Split('#');
+            string inst = parts.Length > 2 ? parts[2] : Path;
+            var hash = System.Security.Cryptography.SHA1.HashData(System.Text.Encoding.UTF8.GetBytes(inst.ToLowerInvariant()));
+            return "p-" + Convert.ToHexString(hash, 0, 4).ToLowerInvariant();
+        }
+    }
+}
 
 public static class HidEnumerator
 {
@@ -25,8 +42,11 @@ public static class HidEnumerator
                 var name = new byte[256];
                 string product = Native.HidD_GetProductString(h, name, name.Length)
                     ? System.Text.Encoding.Unicode.GetString(name).TrimEnd('\0') : "";
+                var sn = new byte[256];
+                string serial = Native.HidD_GetSerialNumberString(h, sn, sn.Length)
+                    ? System.Text.Encoding.Unicode.GetString(sn).TrimEnd('\0').Trim() : "";
                 list.Add(new HidInterface(path, vid, pid, c.UsagePage, c.Usage,
-                    c.InputReportByteLength, c.OutputReportByteLength, c.FeatureReportByteLength, product));
+                    c.InputReportByteLength, c.OutputReportByteLength, c.FeatureReportByteLength, product, serial));
             }
             finally { Native.HidD_FreePreparsedData(pp); }
         }
@@ -116,6 +136,7 @@ internal static class Native
     [DllImport("hid.dll")] public static extern int HidP_GetCaps(IntPtr p, out HIDP_CAPS c);
     [DllImport("hid.dll", SetLastError = true)] public static extern bool HidD_GetFeature(SafeFileHandle h, byte[] b, int len);
     [DllImport("hid.dll", SetLastError = true)] public static extern bool HidD_GetProductString(SafeFileHandle h, byte[] b, int len);
+    [DllImport("hid.dll", SetLastError = true)] public static extern bool HidD_GetSerialNumberString(SafeFileHandle h, byte[] b, int len);
 
     [DllImport("setupapi.dll", SetLastError = true)] static extern IntPtr SetupDiGetClassDevs(ref Guid g, IntPtr e, IntPtr w, int flags);
     [DllImport("setupapi.dll", SetLastError = true)] static extern bool SetupDiEnumDeviceInterfaces(IntPtr s, IntPtr d, ref Guid g, int i, ref SP_DEVICE_INTERFACE_DATA data);

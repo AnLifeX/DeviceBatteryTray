@@ -122,6 +122,8 @@
 
             <!-- 在线设备 -->
             <StackPanel Grid.Row="2" Margin="6,0,6,8">
+                <!-- 设备多时限高滚动，面板不会超出屏幕 -->
+                <ScrollViewer MaxHeight="440" VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding OnlineDevices}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type local:DeviceItem}">
@@ -159,11 +161,12 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+                </ScrollViewer>
 
                 <!-- 空状态 -->
                 <StackPanel Visibility="{Binding NoOnlineDevices, Converter={StaticResource BoolToVis}}" Margin="0,14,0,10">
                     <ui:SymbolIcon Symbol="PlugDisconnected24" FontSize="28" HorizontalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                    <ui:TextBlock Text="没有在线的设备" HorizontalAlignment="Center" Margin="0,8,0,6" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <ui:TextBlock Text="没有要显示的设备" HorizontalAlignment="Center" Margin="0,8,0,6" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     <ui:HyperlinkButton Content="打开主页面" HorizontalAlignment="Center" Command="{Binding OpenMainCommand}" />
                 </StackPanel>
             </StackPanel>

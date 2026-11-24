@@ -11,6 +11,10 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>页面通过它拿到数据。</summary>
     public static MainViewModel? ViewModel { get; private set; }
 
+    /// <summary>程序图标（标题栏、关于页用）。</summary>
+    public static System.Windows.Media.ImageSource AppIconSource => _icon ??= LoadIcon();
+    private static BitmapSource? _icon;
+
     private readonly IAppModel _m;
     private readonly System.Windows.Threading.DispatcherTimer _tick = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private MainPage _page;
@@ -24,7 +28,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         InitializeComponent();
 
         WindowBackdropType = WpfHost.Backdrop;
-        TitleIcon.Source = LoadIcon();
+        TitleIcon.Source = AppIconSource;
         Icon = TitleIcon.Source;
 
         ViewModel.NavigateRequested += p => Page = p;
@@ -59,12 +63,18 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     private DevicesPage? _devices;
     private SettingsPage? _settings;
+    private AboutPage? _about;
 
-    /// <summary>切换页面：进设置从右侧滑入，返回从左侧滑入（淡入 + 位移 24px，ease-out）。</summary>
+    /// <summary>切换页面：进设置 / 关于从右侧滑入，返回从左侧滑入（淡入 + 位移 24px，ease-out）。</summary>
     void Navigate(MainPage page)
     {
-        bool forward = page == MainPage.Settings;
-        object next = forward ? (_settings ??= new SettingsPage()) : (_devices ??= new DevicesPage());
+        bool forward = page != MainPage.Home;
+        object next = page switch
+        {
+            MainPage.Settings => _settings ??= new SettingsPage(),
+            MainPage.About => _about ??= new AboutPage(),
+            _ => _devices ??= new DevicesPage(),
+        };
         if (ReferenceEquals(Host.Content, next)) return;
         bool animate = Host.Content != null;
         Host.Content = next;
@@ -87,7 +97,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     static BitmapSource LoadIcon()
     {
-        using var bmp = AppIcon.Bitmap(48);
+        using var bmp = AppIcon.Bitmap(256);
         var ms = new MemoryStream();
         bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png); // 走 PNG 保留透明通道
         ms.Position = 0;

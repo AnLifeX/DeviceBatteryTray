@@ -31,7 +31,8 @@ public static class Program
         // Velopack 必须最先运行：安装 / 更新 / 卸载时会用特殊参数启动本程序执行钩子，然后直接退出
         // Velopack 在覆盖安装 / 卸载前会强制结束正在运行的本程序，来不及还原任务栏，所以在钩子里补上
         VelopackApp.Build()
-            .OnAfterInstallFastCallback(_ => TaskbarWidget.RestoreTaskbarLayout())
+            .OnAfterInstallFastCallback(_ => { TaskbarWidget.RestoreTaskbarLayout(); RefreshShellIcons(); })
+            .OnAfterUpdateFastCallback(_ => RefreshShellIcons())
             .OnBeforeUninstallFastCallback(_ => OnUninstall())
             .Run();
 
@@ -53,7 +54,8 @@ public static class Program
             }
             else
             {
-                w = new Views.MainWindow(new DemoModel(), args.Length > 1 && args[1] == "settings" ? MainPage.Settings : MainPage.Home);
+                w = new Views.MainWindow(new DemoModel(), args.Length < 2 ? MainPage.Home
+                    : args[1] == "settings" ? MainPage.Settings : args[1] == "about" ? MainPage.About : MainPage.Home);
                 Views.WpfHost.Show(w);
             }
             w.Closed += (_, _) => Application.Exit();
@@ -210,6 +212,17 @@ public static class Program
 
     [DllImport("user32.dll")] static extern bool AllowSetForegroundWindow(int pid);
 
+    /// <summary>
+    /// 通知资源管理器刷新图标：快捷方式指向的路径（current\DeviceBatteryTray.exe）不变，
+    /// 换了图标后桌面 / 开始菜单仍会显示缓存里的旧图标。
+    /// </summary>
+    static void RefreshShellIcons()
+    {
+        try { SHChangeNotify(0x08000000 /*SHCNE_ASSOCCHANGED*/, 0, IntPtr.Zero, IntPtr.Zero); } catch { }
+    }
+
+    [DllImport("shell32.dll")] static extern void SHChangeNotify(int eventId, uint flags, IntPtr item1, IntPtr item2);
+
     // ---------- --dump ----------
 
     /// <summary>调试：读一遍所有设备写到文件，并用演示数据输出界面预览图（WinExe 没有控制台）。</summary>
@@ -228,7 +241,7 @@ public static class Program
         File.WriteAllLines(file, lines);
 
         // 任务栏内嵌条预览（演示数据）；面板和主页面的预览用 --demo-ui
-        using var strip = TaskbarWidget.Render(DemoData.Devices.Where(d => d.Online)
+        using var strip = TaskbarWidget.Render(DeviceList.Build(DemoData.Raw).Where(d => d.Shown)
             .Select(d => new TaskbarWidget.Item(d.Kind, d.Name, d.Reading!)).ToList(), 40, Color.White);
         using var sheet = new Bitmap(strip.Width * 2 + 32, strip.Height * 2 + 16);
         using (var g = Graphics.FromImage(sheet))
@@ -243,7 +256,7 @@ public static class Program
     /// <summary>--dump 预览用的演示数据。</summary>
     sealed class DemoModel : IAppModel
     {
-        public IReadOnlyList<DeviceStatus> Devices => DemoData.Devices
+        public IReadOnlyList<DeviceStatus> Devices => DeviceList.Build(DemoData.Raw)
             .Append(new DeviceStatus("demo-admin", DeviceKind.Gamepad, "飞智 黑武士 3 Pro（普通权限时）",
                 new BatteryReading(ReadState.Error, Detail: FlydigiVader.NeedAdminDetail))).ToList();
         public DateTime? UpdatedAt => new DateTime(2026, 11, 24, 14, 32, 5);

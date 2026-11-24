@@ -25,6 +25,12 @@ public sealed class AppSettings
     /// <summary>检查更新的间隔（小时）。</summary>
     public int UpdateCheckHours { get; set; } = 6;
 
+    /// <summary>用户在主页面关掉「显示」的设备 ID（不在任务栏 / 弹出面板显示，也不提醒）。默认全部显示。</summary>
+    public List<string> HiddenDevices { get; set; } = new();
+
+    /// <summary>用户给设备起的名字（设备 ID → 名称），用来区分同型号的多台设备。</summary>
+    public Dictionary<string, string> DeviceNames { get; set; } = new();
+
     public static readonly int[] RefreshChoices = { 10, 30, 60, 120, 300 };
     public static readonly int[] LowBatteryChoices = { 0, 10, 15, 20, 30 };
     public static readonly int[] UpdateCheckChoices = { 1, 6, 12, 24, 168 };
@@ -93,6 +99,8 @@ public sealed class AppSettings
         RefreshSeconds = Math.Clamp(RefreshSeconds, 5, 3600);
         LowBatteryPercent = Math.Clamp(LowBatteryPercent, 0, 100);
         UpdateCheckHours = Math.Clamp(UpdateCheckHours, 1, 24 * 30);
+        HiddenDevices ??= new();
+        DeviceNames ??= new();
     }
 
     public static string RefreshText(int sec) => sec < 60 ? $"{sec} 秒" : $"{sec / 60} 分钟";

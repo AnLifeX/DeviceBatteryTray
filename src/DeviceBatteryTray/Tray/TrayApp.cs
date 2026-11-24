@@ -17,7 +17,8 @@ public sealed class TrayApp : ApplicationContext, IAppModel
     static readonly TimeSpan FirstUpdateCheck = TimeSpan.FromSeconds(20);
 
     private readonly List<BatteryProvider> _providers;
-    private readonly Dictionary<string, BatteryReading> _last = new();
+    /// <summary>最近一次读到的所有设备（同型号多个接收器各一项）；还没读过时每个型号一项、读数为 null。</summary>
+    private List<RawDevice> _raw;
     private readonly HashSet<string> _lowNotified = new();
     private readonly NotifyIcon _app;
     private readonly TaskbarWidget _widget = new();
@@ -39,8 +40,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
     public UpdateState Update { get; private set; } = UpdateState.Idle;
     public bool Elevated { get; } = FlydigiVader.IsElevated();
 
-    public IReadOnlyList<DeviceStatus> Devices => _demo ? DemoData.Devices
-        : _providers.Select(p => new DeviceStatus(p.Id, p.Kind, p.DisplayName, _last.GetValueOrDefault(p.Id))).ToList();
+    public IReadOnlyList<DeviceStatus> Devices => DeviceList.Build(_demo ? DemoData.Raw : _raw);
 
     /// <summary>演示模式：用模拟设备代替真实读取，不弹低电量提醒；只在内存里，重启后关闭。</summary>
     public bool Demo
@@ -62,6 +62,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
     {
         _demo = demo;
         _providers = providers;
+        _raw = providers.Select(p => new RawDevice(p.Id, "", p.Kind, p.DisplayName, null)).ToList();
         _ui = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
         _app = new NotifyIcon { Text = "设备电量", Icon = AppIcon.Sized(SystemInformation.SmallIconSize.Width), Visible = false };
         _app.MouseUp += (_, _) => ToggleFlyout();
@@ -149,17 +150,22 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         {
             try
             {
-                var results = new Dictionary<string, BatteryReading>();
+                var results = new List<RawDevice>();
                 foreach (var p in _providers)
                 {
                     var sw = System.Diagnostics.Stopwatch.StartNew();
-                    try { results[p.Id] = p.Read(); }
-                    catch (Exception e) { results[p.Id] = BatteryReading.Fail(e.Message); Log.W($"{p.Id} 异常: {e}"); }
-                    Log.W($"{p.Id}: {results[p.Id]} ({sw.ElapsedMilliseconds}ms)");
+                    IReadOnlyList<DeviceReading> readings;
+                    try { readings = p.ReadAll(); }
+                    catch (Exception e) { readings = new[] { new DeviceReading("", BatteryReading.Fail(e.Message)) }; Log.W($"{p.Id} 异常: {e}"); }
+                    foreach (var r in readings)
+                    {
+                        results.Add(new RawDevice(p.Id, r.Key, p.Kind, p.DisplayName, r.Reading));
+                        Log.W($"{DeviceList.IdOf(p.Id, r.Key)}: {r.Reading} ({sw.ElapsedMilliseconds}ms)");
+                    }
                 }
                 _ui.Post(_ =>
                 {
-                    foreach (var kv in results) _last[kv.Key] = kv.Value;
+                    _raw = results;
                     UpdatedAt = DateTime.Now;
                     Refreshing = false;
                     RefreshWidget();
@@ -170,8 +176,8 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         });
     }
 
-    /// <summary>只有读到电量的设备才显示。</summary>
-    private List<DeviceStatus> Online() => Devices.Where(d => d.Online).ToList();
+    /// <summary>任务栏和面板只显示读到电量、且没被用户隐藏的设备。</summary>
+    private List<DeviceStatus> Online() => Devices.Where(d => d.Shown).ToList();
 
     private void RefreshWidget()
     {

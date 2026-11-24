@@ -28,6 +28,7 @@ public abstract class Observable : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
     protected void RaiseAll() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
+    protected void Raise(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
 
 public enum BatteryLevel { Good, Caution, Critical, Charging, None }
@@ -40,15 +41,67 @@ public sealed class DeviceItem : Observable
     private bool _online, _needsAdmin;
     private BatteryLevel _level;
 
-    public DeviceItem(string id, DeviceKind kind, string name)
+    private string _name = "", _model = "", _editName = "";
+    private bool _visible = true, _editing;
+
+    public DeviceItem(string id, DeviceKind kind)
     {
         Id = id;
-        Name = name;
         Glyph = Tray.Glyphs.Device(kind);
+        RenameCommand = new RelayCommand(() => { EditName = Name; Editing = true; });
+        CommitRenameCommand = new RelayCommand(CommitRename);
+        CancelRenameCommand = new RelayCommand(() => Editing = false);
     }
 
     public string Id { get; }
-    public string Name { get; }
+    public string Name { get => _name; private set => Set(ref _name, value); }
+    public string Model { get => _model; private set => Set(ref _model, value); }
+
+    /// <summary>主页面的「显示」开关：关掉后不在任务栏和弹出面板显示，也不弹低电量提醒。</summary>
+    public bool Visible
+    {
+        get => _visible;
+        set
+        {
+            if (_visible == value) return;
+            Set(ref _visible, value);
+            AppSettings.Change(s =>
+            {
+                s.HiddenDevices.Remove(Id);
+                if (!value) s.HiddenDevices.Add(Id);
+            });
+        }
+    }
+
+    // ----- 重命名（就地编辑） -----
+    public bool Editing { get => _editing; set => Set(ref _editing, value); }
+    public string EditName { get => _editName; set => Set(ref _editName, value); }
+    public ICommand RenameCommand { get; }
+    public ICommand CommitRenameCommand { get; }
+    public ICommand CancelRenameCommand { get; }
+
+    /// <summary>保存名称；清空或改回型号名则恢复默认（同型号多台时自动编号）。</summary>
+    void CommitRename()
+    {
+        if (!Editing) return;
+        Editing = false;
+        string n = EditName.Trim();
+        AppSettings.Change(s =>
+        {
+            if (n.Length == 0 || n == Model) s.DeviceNames.Remove(Id);
+            else s.DeviceNames[Id] = n;
+        });
+    }
+
+    public void Update(DeviceStatus d)
+    {
+        Name = d.Name;
+        Model = d.Model;
+        if (_visible != d.Visible) { _visible = d.Visible; Raise(nameof(Visible)); }
+        Update(d.Reading!);
+        // 用户改过名字的设备，在状态前面带上型号，方便知道是什么设备（自动编号的「型号 2」不用重复）
+        if (d.Model.Length > 0 && !d.Name.StartsWith(d.Model)) Status = d.Model + " · " + Status;
+    }
     public string Glyph { get; }
     public string Status { get => _status; private set => Set(ref _status, value); }
     public double Percent { get => _percent; private set => Set(ref _percent, value); }
@@ -62,7 +115,7 @@ public sealed class DeviceItem : Observable
     public bool NeedsAdmin { get => _needsAdmin; private set => Set(ref _needsAdmin, value); }
     public BatteryLevel Level { get => _level; private set => Set(ref _level, value); }
 
-    public void Update(BatteryReading r)
+    void Update(BatteryReading r)
     {
         Online = r.State == ReadState.Ok;
         NeedsAdmin = r.Detail == FlydigiVader.NeedAdminDetail;
@@ -108,6 +161,10 @@ public sealed class MainViewModel : Observable
         ExitCommand = new RelayCommand(() => { CloseRequested?.Invoke(); _m.Exit(); });
         ExitDemoCommand = new RelayCommand(() => _m.Demo = false);
         BackCommand = new RelayCommand(() => NavigateRequested?.Invoke(MainPage.Home));
+        ShowAboutCommand = new RelayCommand(() => NavigateRequested?.Invoke(MainPage.About));
+        ThemeSystemCommand = new RelayCommand(() => AppSettings.Change(s => s.Theme = ThemeMode.System));
+        ThemeLightCommand = new RelayCommand(() => AppSettings.Change(s => s.Theme = ThemeMode.Light));
+        ThemeDarkCommand = new RelayCommand(() => AppSettings.Change(s => s.Theme = ThemeMode.Dark));
         Sync();
     }
 
@@ -131,6 +188,10 @@ public sealed class MainViewModel : Observable
     /// <summary>弹出面板里点了会打开主页面的操作，面板据此先关闭自己。</summary>
     public event Action? CloseRequested;
     public ICommand BackCommand { get; }
+    public ICommand ShowAboutCommand { get; }
+    public ICommand ThemeSystemCommand { get; }
+    public ICommand ThemeLightCommand { get; }
+    public ICommand ThemeDarkCommand { get; }
 
     /// <summary>页面切换请求（由主窗口处理动画）。</summary>
     public event Action<MainPage>? NavigateRequested;
@@ -143,8 +204,8 @@ public sealed class MainViewModel : Observable
         // 主页面：接收器在的设备；弹出面板：在线的设备
         var all = _m.Devices;
         SyncList(Devices, all.Where(d => d.Reading is { State: not ReadState.NotFound }).ToList());
-        SyncList(OnlineDevices, all.Where(d => d.Online).ToList());
-        SupportedText = "支持：" + string.Join("、", _m.Devices.Select(d => d.Name));
+        SyncList(OnlineDevices, all.Where(d => d.Shown).ToList());
+        SupportedText = "支持：" + string.Join("、", all.Select(d => d.Model).Where(m => m.Length > 0).Distinct());
         if (!_m.Refreshing && DateTime.Now >= _spinUntil) Spinning = false;
         else if (_m.Refreshing) Spinning = true;
         RaiseAll();
@@ -159,8 +220,9 @@ public sealed class MainViewModel : Observable
         {
             var d = shown[i];
             var item = list.FirstOrDefault(x => x.Id == d.Id);
-            if (item == null) list.Insert(Math.Min(i, list.Count), item = new DeviceItem(d.Id, d.Kind, d.Name));
-            item.Update(d.Reading!);
+            if (item == null) list.Insert(Math.Min(i, list.Count), item = new DeviceItem(d.Id, d.Kind));
+            else if (list.IndexOf(item) != i) list.Move(list.IndexOf(item), i);
+            item.Update(d);
         }
     }
 
@@ -197,6 +259,21 @@ public sealed class MainViewModel : Observable
 
     public string Version => "v" + Updater.CurrentText;
 
+    /// <summary>主题按钮上的图标：跟随系统 / 浅色（太阳）/ 深色（月亮）。</summary>
+    public Wpf.Ui.Controls.SymbolRegular ThemeSymbol => AppSettings.Current.Theme switch
+    {
+        ThemeMode.Light => Wpf.Ui.Controls.SymbolRegular.WeatherSunny24,
+        ThemeMode.Dark => Wpf.Ui.Controls.SymbolRegular.WeatherMoon24,
+        _ => Wpf.Ui.Controls.SymbolRegular.DarkTheme24,
+    };
+    public bool ThemeIsSystem => AppSettings.Current.Theme == ThemeMode.System;
+    public bool ThemeIsLight => AppSettings.Current.Theme == ThemeMode.Light;
+    public bool ThemeIsDark => AppSettings.Current.Theme == ThemeMode.Dark;
+
+    /// <summary>关于页用的大图标。</summary>
+    public System.Windows.Media.ImageSource? AppIconImage => MainWindow.AppIconSource;
+    public string Description => "在 Windows 任务栏上显示无线键盘、鼠标、手柄的电量。直接和接收器通讯，不需要安装各家的驱动软件。";
+
     public bool AutoStart
     {
         get => _m.AutoStart;
@@ -205,12 +282,11 @@ public sealed class MainViewModel : Observable
 
     public string AutoStartDescription => _m.Elevated ? "登录 Windows 后在后台启动（使用计划任务，不弹 UAC）" : "登录 Windows 后在后台启动";
 
-    public IReadOnlyList<Choice> RefreshChoices { get; } =
-        AppSettings.RefreshChoices.Select(v => new Choice(AppSettings.RefreshText(v), v)).ToList();
-    public object RefreshSeconds
+    /// <summary>刷新间隔（秒），可以直接输入，5 ~ 3600。</summary>
+    public double? RefreshSeconds
     {
         get => AppSettings.Current.RefreshSeconds;
-        set { if (value is int v) AppSettings.Change(s => s.RefreshSeconds = v); }
+        set { if (value is double v && (int)Math.Round(v) != AppSettings.Current.RefreshSeconds) AppSettings.Change(s => s.RefreshSeconds = (int)Math.Round(v)); }
     }
 
     public IReadOnlyList<Choice> LowBatteryChoices { get; } =

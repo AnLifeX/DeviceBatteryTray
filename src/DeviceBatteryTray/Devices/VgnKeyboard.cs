@@ -10,11 +10,10 @@ public sealed class VgnKeyboard : BatteryProvider
     public override string DisplayName => "VGN V98Pro V2 键盘";
     public override DeviceKind Kind => DeviceKind.Keyboard;
 
-    public override BatteryReading Read()
-    {
-        using var c = OpenVendorInterface(Vid, Pid, UsagePage);
-        if (c == null) return Present(Vid, Pid) ? BatteryReading.Fail("打不开厂商接口") : BatteryReading.NotFound;
+    public override IReadOnlyList<DeviceReading> ReadAll() => ReadEachReceiver(Vid, new[] { Pid }, UsagePage, ReadOne);
 
+    static BatteryReading ReadOne(Hid.HidConnection c)
+    {
         // 键盘休眠时接收器有时完全不回，重试一次仍无应答就按休眠处理
         byte[]? rx = null;
         for (int attempt = 0; attempt < 2 && rx == null; attempt++)

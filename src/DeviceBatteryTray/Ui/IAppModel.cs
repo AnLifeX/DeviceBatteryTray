@@ -2,13 +2,19 @@ using DeviceBatteryTray.Devices;
 
 namespace DeviceBatteryTray.Ui;
 
-/// <summary>一个设备的当前状态；Reading 为 null 表示还没读过。</summary>
-public sealed record DeviceStatus(string Id, DeviceKind Kind, string Name, BatteryReading? Reading)
+/// <summary>
+/// 一个设备的当前状态；Reading 为 null 表示还没读过。Name 是显示名（用户改过就是用户的名字），
+/// Model 是型号名；Visible 为 false 表示用户在主页面关掉了显示。
+/// </summary>
+public sealed record DeviceStatus(string Id, DeviceKind Kind, string Name, BatteryReading? Reading, string Model = "", bool Visible = true)
 {
     public bool Online => Reading?.State == ReadState.Ok;
+
+    /// <summary>任务栏和弹出面板只显示在线且没被隐藏的设备。</summary>
+    public bool Shown => Online && Visible;
 }
 
-public enum MainPage { Home, Settings }
+public enum MainPage { Home, Settings, About }
 
 /// <summary>面板和主页面看到的程序状态与操作（TrayApp 实现；--dump 预览用演示数据实现）。</summary>
 public interface IAppModel
