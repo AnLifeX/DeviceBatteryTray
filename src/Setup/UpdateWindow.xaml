@@ -1,0 +1,38 @@
+<ui:FluentWindow x:Class="DeviceBatteryTray.Setup.UpdateWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Width="460" SizeToContent="Height" MinHeight="0" ResizeMode="NoResize"
+                 WindowStartupLocation="CenterScreen"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowCornerPreference="Round">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar x:Name="TitleBar" Grid.Row="0" ShowMaximize="False" CanMaximize="False" ShowClose="False">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon x:Name="TitleIcon" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <StackPanel Grid.Row="1" Margin="28,4,28,24">
+            <StackPanel Orientation="Horizontal">
+                <Image x:Name="Logo" Width="48" Height="48" RenderOptions.BitmapScalingMode="HighQuality" />
+                <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
+                    <TextBlock x:Name="Heading" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    <TextBlock x:Name="VersionText" FontSize="12" Margin="0,2,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </StackPanel>
+            <TextBlock x:Name="StatusText" Style="{StaticResource Hint}" Margin="0,20,0,8" />
+            <ProgressBar x:Name="Bar" Maximum="100" />
+            <ui:InfoBar x:Name="ErrorInfo" Margin="0,16,0,0" Severity="Error" Title="更新失败" IsClosable="False" />
+            <StackPanel x:Name="ErrorButtons" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0" Visibility="Collapsed">
+                <ui:Button x:Name="RetryButton" Content="重试" Appearance="Primary" />
+                <ui:Button x:Name="CloseButton" Content="关闭" Margin="8,0,0,0" />
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</ui:FluentWindow>

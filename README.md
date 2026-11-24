@@ -8,9 +8,9 @@
 不用安装、也不用打开各家的驱动软件
 
 [![最新版本](https://img.shields.io/github/v/release/AnLifeX/DeviceBatteryTray?label=%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC&color=2DD4BF)](https://github.com/AnLifeX/DeviceBatteryTray/releases/latest)
-[![下载次数](https://img.shields.io/github/downloads/AnLifeX/DeviceBatteryTray/total?label=%E4%B8%8B%E8%BD%BD&color=0EA5E9)](https://github.com/AnLifeX/DeviceBatteryTray/releases)
 [![Windows 10](https://img.shields.io/badge/Windows-10-0078D4?logo=windows&logoColor=white)](#系统要求)
 [![.NET 8](https://img.shields.io/badge/.NET-8-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/download/dotnet/8.0)
+[![MIT 许可证](https://img.shields.io/badge/%E8%AE%B8%E5%8F%AF%E8%AF%81-MIT-22C55E)](LICENSE)
 
 [下载](#下载安装) · [支持的设备](#支持的设备) · [使用说明](#使用说明) · [常见问题](#常见问题)
 
@@ -59,10 +59,13 @@
 
 | 版本 | 文件 | 说明 |
 |---|---|---|
-| **安装版**（推荐） | `DeviceBatteryTray-win-Setup.exe` | 双击安装，不需要管理员权限；缺少 .NET 8 运行时会自动安装；创建桌面和开始菜单快捷方式 |
-| 便携版 | `DeviceBatteryTray-win-Portable.zip` | 解压到任意目录后运行 `设备电量.exe`；需要先安装 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0) |
+| **安装版**（推荐） | `DeviceBatteryTray-Setup.exe` | 按向导安装，默认装在用户目录下，不需要管理员权限；可选桌面快捷方式和开机自启 |
+| 便携版 | `DeviceBatteryTray-Portable.zip` | 解压到任意文件夹后运行 `DeviceBatteryTray.exe`；需要先安装 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0) |
 
-两种版本都会自动更新。安装版可以在「设置 → 应用」里卸载，卸载时会还原任务栏，并删除程序的设置和日志。
+- 程序需要 .NET 8 桌面运行时。安装版发现电脑上没有时，会从微软官网下载并安装（约 56 MB），这一步会请求一次管理员权限。
+- 两种版本都会自动更新：发现新版本后在后台下载，替换完成后自动重新启动。
+- **卸载**：在「设置 → 应用」里找到「设备电量」，或打开开始菜单的「设备电量」文件夹，点「卸载 设备电量」。
+  卸载时会还原任务栏、删除开机自启，可以选择是否保留设置。
 
 ### 系统要求
 
@@ -123,7 +126,7 @@
 <summary><b>程序被强制结束后，任务栏上的按钮区变窄了？</b></summary>
 
 程序正常退出时会自动还原任务栏，被强制结束时则来不及。重新打开程序再正常退出即可恢复；
-也可以在命令行运行一次 `"%LOCALAPPDATA%\DeviceBatteryTray\current\DeviceBatteryTray.exe" --restore-taskbar`。
+也可以在命令行运行一次 `"%LOCALAPPDATA%\Programs\DeviceBatteryTray\DeviceBatteryTray.exe" --restore-taskbar`。
 </details>
 
 <details>
@@ -141,7 +144,7 @@
 <details>
 <summary><b>命令行参数</b></summary>
 
-程序位置：安装版是 `%LOCALAPPDATA%\DeviceBatteryTray\current\DeviceBatteryTray.exe`，便携版是解压目录里 `current\DeviceBatteryTray.exe`。
+程序位置：安装版默认是 `%LOCALAPPDATA%\Programs\DeviceBatteryTray\DeviceBatteryTray.exe`，便携版是解压目录里的 `DeviceBatteryTray.exe`。
 
 | 参数 | 说明 |
 |---|---|
@@ -160,3 +163,7 @@
 ## 声明
 
 本项目与上述设备厂商无关。协议通过分析本机已安装的官方软件得到，仅用于读取自己设备的电量。
+
+## 许可证
+
+[MIT](LICENSE)。

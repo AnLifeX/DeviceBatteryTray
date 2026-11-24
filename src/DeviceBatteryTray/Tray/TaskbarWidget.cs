@@ -108,7 +108,7 @@ public sealed class TaskbarWidget : Form
     }
 
     /// <summary>
-    /// 不依赖实例的任务栏还原：程序被强制结束（如 Velopack 安装 / 卸载前会结束进程）后，
+    /// 不依赖实例的任务栏还原：程序被强制结束（如安装包关不掉它时）后，
     /// 任务按钮区仍是缩窄的宽度。它的左边位置没被改过，把宽度撑满到 rebar 右侧即可。
     /// </summary>
     public static void RestoreTaskbarLayout()

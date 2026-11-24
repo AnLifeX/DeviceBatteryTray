@@ -2,8 +2,7 @@ namespace DeviceBatteryTray;
 
 /// <summary>
 /// 程序数据目录：%APPDATA%\DeviceBatteryTray（设置、日志）。
-/// 不能用 %LOCALAPPDATA%\DeviceBatteryTray：那是 Velopack 的安装目录，安装 / 卸载时会被整个清空。
-/// 卸载时由 Program.OnUninstall 删除。
+/// 卸载时由安装包（src/Setup）删除（用户选择保留设置时不删）。
 /// </summary>
 public static class AppPaths
 {

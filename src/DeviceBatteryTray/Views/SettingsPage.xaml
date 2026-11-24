@@ -28,7 +28,7 @@
         </Grid.RowDefinitions>
 
         <!-- 固定标题栏 -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,4,0,4">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="32,4,32,4">
             <ui:Button Command="{Binding BackCommand}" Appearance="Transparent" Padding="8" ToolTip="返回" VerticalAlignment="Center">
                 <ui:SymbolIcon Symbol="ArrowLeft24" FontSize="18" />
             </ui:Button>
@@ -36,7 +36,7 @@
         </StackPanel>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="0,0,14,24">
+            <StackPanel Margin="32,0,32,24">
                 <ui:TextBlock Style="{StaticResource Section}" Text="常规" />
                 <ui:CardControl Icon="{ui:SymbolIcon Power24}">
                     <ui:CardControl.Header>

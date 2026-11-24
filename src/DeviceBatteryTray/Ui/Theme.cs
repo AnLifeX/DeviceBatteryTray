@@ -2,10 +2,14 @@ using Microsoft.Win32;
 
 namespace DeviceBatteryTray.Ui;
 
+/// <summary>
+/// 主题设置。界面上只有主页面的深浅切换按钮（保存为 Light / Dark）；
+/// System 只是还没点过按钮时的初始值：按 Windows 当前的深浅色显示。
+/// </summary>
 public enum ThemeMode { System, Light, Dark }
 
 /// <summary>
-/// 当前深浅色：按「设置 → 主题」（跟随系统 / 浅色 / 深色）决定。主页面和弹出面板（WPF-UI）据此切换主题；
+/// 当前深浅色（见 <see cref="ThemeMode"/>）。主页面和弹出面板（WPF-UI）据此切换主题；
 /// 任务栏电量条不看这里，始终跟随任务栏颜色（见 Glyphs.DarkTaskbar）。
 /// </summary>
 public sealed class Theme

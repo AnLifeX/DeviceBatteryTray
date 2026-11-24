@@ -19,6 +19,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private readonly System.Windows.Threading.DispatcherTimer _tick = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private MainPage _page;
 
+    static MainWindow() => Corners.KeepBorderlessWhenTransparent(typeof(MainWindow));
+
     public MainWindow(IAppModel model, MainPage page)
     {
         _m = model;
@@ -29,13 +31,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
         WindowBackdropType = WpfHost.Backdrop;
         Corners.RoundWindow(this, 8); // Win10 没有系统窗口圆角
-        if (Corners.NeedsWindowRegion)
-        {
-            void Edge() => WindowEdge.Visibility = WindowState == System.Windows.WindowState.Maximized
-                ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
-            Edge();
-            StateChanged += (_, _) => Edge();
-        }
         TitleIcon.Source = AppIconSource;
         Icon = TitleIcon.Source;
 

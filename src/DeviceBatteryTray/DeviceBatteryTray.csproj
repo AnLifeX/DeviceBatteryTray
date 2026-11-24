@@ -25,7 +25,6 @@
     <EmbeddedResource Include="app.ico" LogicalName="app.ico" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Velopack" Version="1.2.161" />
     <PackageReference Include="WPF-UI" Version="4.3.0" />
   </ItemGroup>
 </Project>

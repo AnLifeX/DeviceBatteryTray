@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    安装 / 卸载 / 更新程序（一个 exe 三种模式，见 Program.cs）。
+    用 .NET Framework 4.8：Win10 / 11 自带，安装器本身不依赖 .NET 8，可以在装好运行时之前运行。
+    程序文件（payload.zip）和 WPF-UI 等依赖都嵌在 exe 里，发布时只有一个文件；打包见 build/package.ps1。
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Setup</AssemblyName>
+    <RootNamespace>DeviceBatteryTray.Setup</RootNamespace>
+    <ApplicationIcon>..\DeviceBatteryTray\app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <StartupObject>DeviceBatteryTray.Setup.Program</StartupObject>
+    <!-- 打包时由 CI 从 git tag 传入 -p:Version=X.Y.Z，必须和程序文件的版本一致 -->
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <Product>设备电量</Product>
+    <AssemblyTitle>设备电量 安装程序</AssemblyTitle>
+    <Company>AnLifeX</Company>
+    <DebugType>none</DebugType>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 与主程序共用：Win10 窗口圆角 -->
+    <Compile Include="..\DeviceBatteryTray\Views\Corners.cs" Link="Shared\Corners.cs" />
+    <Resource Include="..\DeviceBatteryTray\app.ico" Link="app.ico" />
+  </ItemGroup>
+
+  <!-- 程序文件：build/package.ps1 先发布主程序并打成 zip，再用 -p:PayloadZip=... 传进来 -->
+  <ItemGroup Condition="'$(PayloadZip)' != ''">
+    <EmbeddedResource Include="$(PayloadZip)" LogicalName="payload.zip" />
+  </ItemGroup>
+
+  <!--
+    把 WPF-UI、System.Memory 等引用的 dll 压缩成 libs.zip 嵌进 exe，运行时从这里加载（见 EmbeddedLibs.cs），
+    这样发布的安装包只有一个 exe。
+  -->
+  <Target Name="EmbedReferencedLibs" AfterTargets="ResolveAssemblyReferences">
+    <PropertyGroup>
+      <_LibsDir>$(IntermediateOutputPath)libs\</_LibsDir>
+      <_LibsZip>$(IntermediateOutputPath)libs.zip</_LibsZip>
+    </PropertyGroup>
+    <RemoveDir Directories="$(_LibsDir)" />
+    <Copy SourceFiles="@(ReferenceCopyLocalPaths)" DestinationFolder="$(_LibsDir)" Condition="'%(Extension)' == '.dll'" />
+    <ZipDirectory SourceDirectory="$(_LibsDir)" DestinationFile="$(_LibsZip)" Overwrite="true" />
+    <ItemGroup>
+      <EmbeddedResource Include="$(_LibsZip)" LogicalName="libs.zip" />
+    </ItemGroup>
+  </Target>
+</Project>

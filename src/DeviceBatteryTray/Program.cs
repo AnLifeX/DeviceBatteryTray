@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 using DeviceBatteryTray.Devices;
 using DeviceBatteryTray.Tray;
 using DeviceBatteryTray.Ui;
-using Velopack;
 
 namespace DeviceBatteryTray;
 
@@ -30,14 +29,8 @@ public static class Program
     [STAThread]
     static void Main(string[] args)
     {
-        // Velopack 必须最先运行：安装 / 更新 / 卸载时会用特殊参数启动本程序执行钩子，然后直接退出
-        // Velopack 在覆盖安装 / 卸载前会强制结束正在运行的本程序，来不及还原任务栏，所以在钩子里补上
-        VelopackApp.Build()
-            .OnAfterInstallFastCallback(_ => { TaskbarWidget.RestoreTaskbarLayout(); RefreshShellIcons(); })
-            .OnAfterUpdateFastCallback(_ => RefreshShellIcons())
-            .OnBeforeUninstallFastCallback(_ => OnUninstall())
-            .Run();
-
+        // 安装、更新、卸载由安装包（src/Setup）负责：它会先用退出事件让本程序正常退出（还原任务栏），
+        // 再替换 / 删除文件；被强制结束时它会用 --restore-taskbar 还原任务栏。
         if (args.Length == 2 && args[0] == "--dump") { Dump(args[1]); return; }
 
 #if DEBUG
@@ -124,20 +117,6 @@ public static class Program
         Application.Run(new TrayApp(CreateProviders(), showMain: !background, demo: DemoData.Available && args.Contains("--demo")));
     }
 
-    /// <summary>卸载前（此时程序已被 Velopack 结束）：还原任务栏，删除开机自启项和设置 / 日志。</summary>
-    static void OnUninstall()
-    {
-        try
-        {
-            if (EventWaitHandle.TryOpenExisting(ExitEventName, out var ev)) using (ev) ev.Set(); // 万一还在运行
-            for (int i = 0; i < 30 && SignalRunning(showMain: false); i++) Thread.Sleep(100);
-            TaskbarWidget.RestoreTaskbarLayout();
-            AutoStart.Enabled = false;
-            Directory.Delete(AppPaths.DataDir, recursive: true);
-        }
-        catch { }
-    }
-
     /// <summary>已有实例在运行时返回 true；需要的话通知它打开主页面。</summary>
     static bool SignalRunning(bool showMain)
     {
@@ -214,17 +193,6 @@ public static class Program
 
     [DllImport("user32.dll")] static extern bool AllowSetForegroundWindow(int pid);
 
-    /// <summary>
-    /// 通知资源管理器刷新图标：快捷方式指向的路径（current\DeviceBatteryTray.exe）不变，
-    /// 换了图标后桌面 / 开始菜单仍会显示缓存里的旧图标。
-    /// </summary>
-    static void RefreshShellIcons()
-    {
-        try { SHChangeNotify(0x08000000 /*SHCNE_ASSOCCHANGED*/, 0, IntPtr.Zero, IntPtr.Zero); } catch { }
-    }
-
-    [DllImport("shell32.dll")] static extern void SHChangeNotify(int eventId, uint flags, IntPtr item1, IntPtr item2);
-
     // ---------- --dump ----------
 
     /// <summary>调试：读一遍所有设备写到文件，并用演示数据输出界面预览图（WinExe 没有控制台）。</summary>
@@ -282,7 +250,7 @@ public static class Program
                 new BatteryReading(ReadState.Error, Detail: FlydigiVader.NeedAdminDetail))).ToList();
         public DateTime? UpdatedAt => new DateTime(2026, 11, 24, 14, 32, 5);
         public bool Refreshing => false;
-        public UpdateState Update => clean ? UpdateState.Idle : new(UpdateStatus.Available, new AppUpdate(new Version(0, 2, 0), null!));
+        public UpdateState Update => clean ? UpdateState.Idle : new(UpdateStatus.Available, new AppUpdate(new Version(0, 2, 0), "", 0));
         public bool AutoStart { get => true; set { } }
         public bool Elevated => true;
         public bool Demo { get => !clean; set { } }

@@ -39,7 +39,7 @@ public sealed class AppSettings
     public static readonly int[] UpdateCheckChoices = { 1, 6, 12, 24, 168 };
 
     static readonly string FilePath = Path.Combine(AppPaths.DataDir, "settings.json");
-    // 有一个开发版本把设置放在了 %LOCALAPPDATA%\DeviceBatteryTray（现在是安装目录），读不到新位置时从这里迁移
+    // 有一个开发版本把设置放在了 %LOCALAPPDATA%\DeviceBatteryTray（后来曾是测试版的安装目录），读不到新位置时从这里迁移
     static readonly string OldFilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DeviceBatteryTray", "settings.json");
     static readonly JsonSerializerOptions Json = new() { WriteIndented = true };

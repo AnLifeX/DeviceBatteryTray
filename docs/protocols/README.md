@@ -10,6 +10,8 @@
 | 盖世小鸡手柄 | `3537:103E`（2.4G 接收器） | 直接 HID | [gamesir-dongle.md](gamesir-dongle.md) |
 | 飞智 黑武士 3 Pro | `045E:028E`（XInput） | 飞智过滤驱动，需管理员权限 | [flydigi-vader3pro.md](flydigi-vader3pro.md) |
 
+调研中、暂不支持：漫步者 HECATE G2 无线版耳机（`35BB:A209`），已尝试的方法见 [edifier-hecate-g2.md](edifier-hecate-g2.md)。
+
 ## VGN 键盘
 - 接口：UsagePage `0xFF1C` / Usage `0x92`，Report ID `0x04`，64 字节
 - 请求：`04 <seq_lo> <seq_hi> 1A 00…`（`0x1A` = power_info）

@@ -61,7 +61,7 @@
         </Grid.RowDefinitions>
 
         <!-- 固定标题栏：标题 + 更新时间 + 刷新 / 主题 / 关于 / 设置 -->
-        <Grid Grid.Row="0" Margin="0,4,14,16">
+        <Grid Grid.Row="0" Margin="32,4,32,16">
             <ui:TextBlock FontTypography="Title" Text="设备" VerticalAlignment="Center" />
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <ui:TextBlock Text="{Binding UpdatedText}" VerticalAlignment="Center" Margin="0,0,6,0"
@@ -105,7 +105,7 @@
         </Grid>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="0,0,14,24">
+            <StackPanel Margin="32,0,32,24">
                 <!-- 演示模式提示 -->
                 <Border Visibility="{Binding Demo, Converter={StaticResource BoolToVis}}" CornerRadius="12" Padding="16,12" Margin="0,0,0,12"
                         Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"

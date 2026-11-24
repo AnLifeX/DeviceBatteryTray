@@ -1,11 +1,13 @@
+using System.Diagnostics;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
-using Velopack;
-using Velopack.Sources;
+using System.Text.Json;
 
 namespace DeviceBatteryTray;
 
-/// <summary>一个可用的新版本。</summary>
-public sealed record AppUpdate(Version Version, Velopack.UpdateInfo Info);
+/// <summary>一个可用的新版本：版本号和安装包下载地址。</summary>
+public sealed record AppUpdate(Version Version, string SetupUrl, long Size);
 
 public enum UpdateStatus { Idle, Checking, UpToDate, Available, Downloading, Failed }
 
@@ -15,44 +17,40 @@ public sealed record UpdateState(UpdateStatus Status, AppUpdate? Info = null, in
 }
 
 /// <summary>
-/// 自动更新（Velopack）。安装版和便携版（Portable.zip）都能更新：从 GitHub 已发布的 Release 下载
-/// （草稿不算），优先下载增量包，由 Velopack 的 Update.exe 在本程序退出后替换并重启。
-/// 开发时直接运行 bin 里的 exe 不算安装，不能更新。
+/// 自动更新：查 GitHub 上最新的已发布 Release（草稿和预发布不算），下载其中的安装包，
+/// 以 --update 模式运行它，然后本程序退出；安装包（src/Setup）等本程序退出后替换文件并重新启动。
+/// 安装版和便携版都能更新（程序目录里有安装包写入的文件清单）；开发时直接运行编译输出不能更新。
 /// </summary>
 public static class Updater
 {
     public const string Repo = "AnLifeX/DeviceBatteryTray";
     public static string RepoUrl => $"https://github.com/{Repo}";
 
-    private static UpdateManager? _mgr;
+    const string SetupAsset = "DeviceBatteryTray-Setup.exe";
+    /// <summary>安装包写入的程序文件清单，见 src/Setup/Product.cs。</summary>
+    const string Manifest = "DeviceBatteryTray.files";
 
-    /// <summary>
-    /// 更新源。环境变量 DEVICEBATTERYTRAY_UPDATE_DIR 指向一个 vpk pack 输出目录时改用本地目录
-    /// （测试更新流程用），否则用 GitHub Releases。
-    /// </summary>
-    static UpdateManager Mgr => _mgr ??= new UpdateManager(
-        Environment.GetEnvironmentVariable("DEVICEBATTERYTRAY_UPDATE_DIR") is { Length: > 0 } dir
-            ? new SimpleFileSource(new DirectoryInfo(dir))
-            : new GithubSource(RepoUrl, null, prerelease: false));
+    static readonly HttpClient Http = CreateHttp();
+
+    static HttpClient CreateHttp()
+    {
+        var http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+        http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("DeviceBatteryTray", CurrentText));
+        return http;
+    }
 
     /// <summary>当前版本号，如 "0.2.0"。</summary>
-    public static string CurrentText
-    {
-        get
-        {
-            try { if (Mgr.CurrentVersion is { } v) return v.ToString(); } catch { }
-            return (typeof(Updater).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0").Split('+')[0];
-        }
-    }
+    public static string CurrentText { get; } =
+        (typeof(Updater).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0").Split('+')[0];
 
-    /// <summary>是否由 Velopack 安装（安装版或便携版）；只有这时才能自动更新。</summary>
-    public static bool CanSelfUpdate
-    {
-        get { try { return Mgr.IsInstalled; } catch { return false; } }
-    }
+    static string AppDir => AppContext.BaseDirectory.TrimEnd('\\');
+
+    /// <summary>由安装包安装（安装版或便携版）时才能自动更新。</summary>
+    public static bool CanSelfUpdate => File.Exists(Path.Combine(AppDir, Manifest));
 
     static Version ToVersion(string s)
     {
+        s = s.TrimStart('v', 'V');
         int dash = s.IndexOfAny(new[] { '-', '+' });
         if (dash >= 0) s = s[..dash];
         return Version.TryParse(s, out var v) ? new Version(v.Major, v.Minor, Math.Max(0, v.Build)) : new Version(0, 0, 0);
@@ -62,23 +60,62 @@ public static class Updater
     public static async Task<AppUpdate?> CheckAsync()
     {
         if (!CanSelfUpdate) throw new Exception("当前是开发版本，不支持自动更新（请使用安装版或便携版）");
-        var info = await Mgr.CheckForUpdatesAsync();
-        return info == null ? null : new AppUpdate(ToVersion(info.TargetFullRelease.Version.ToString()), info);
+        using var req = new HttpRequestMessage(HttpMethod.Get, $"https://api.github.com/repos/{Repo}/releases/latest");
+        req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+        HttpResponseMessage resp;
+        try { resp = await Http.SendAsync(req); }
+        catch (HttpRequestException e) { throw new Exception("无法连接到 GitHub：" + e.Message, e); }
+        catch (TaskCanceledException e) { throw new Exception("连接 GitHub 超时", e); }
+        using (resp)
+        {
+            if (resp.StatusCode == System.Net.HttpStatusCode.NotFound) return null; // 还没有发布过任何版本
+            if (!resp.IsSuccessStatusCode) throw new Exception($"GitHub 返回错误 {(int)resp.StatusCode}");
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            var latest = ToVersion(doc.RootElement.GetProperty("tag_name").GetString() ?? "");
+            if (latest <= ToVersion(CurrentText)) return null;
+            foreach (var a in doc.RootElement.GetProperty("assets").EnumerateArray())
+                if (a.GetProperty("name").GetString() == SetupAsset)
+                    return new AppUpdate(latest, a.GetProperty("browser_download_url").GetString()!, a.GetProperty("size").GetInt64());
+            throw new Exception($"v{latest} 的发布里没有安装包");
+        }
     }
 
-    /// <summary>下载新版本（优先增量包）；完成后调用 <see cref="ApplyAndRestart"/>。</summary>
-    public static Task DownloadAsync(AppUpdate u, IProgress<int> progress) =>
-        Mgr.DownloadUpdatesAsync(u.Info, p => progress.Report(p));
+    /// <summary>下载安装包到临时目录，返回文件路径；progress 报告 0~100。</summary>
+    public static async Task<string> DownloadAsync(AppUpdate u, IProgress<int> progress)
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "DeviceBatteryTray");
+        Directory.CreateDirectory(dir);
+        var file = Path.Combine(dir, $"DeviceBatteryTray-Setup-{u.Version}.exe");
+        using var resp = await Http.GetAsync(u.SetupUrl, HttpCompletionOption.ResponseHeadersRead);
+        resp.EnsureSuccessStatusCode();
+        long total = resp.Content.Headers.ContentLength ?? u.Size, done = 0;
+        await using (var src = await resp.Content.ReadAsStreamAsync())
+        await using (var dst = File.Create(file))
+        {
+            var buf = new byte[81920];
+            int n, last = -1;
+            while ((n = await src.ReadAsync(buf)) > 0)
+            {
+                await dst.WriteAsync(buf.AsMemory(0, n));
+                done += n;
+                int pct = total > 0 ? (int)(done * 100 / total) : 0;
+                if (pct != last) progress.Report(last = pct);
+            }
+        }
+        if (u.Size > 0 && new FileInfo(file).Length != u.Size) throw new IOException("安装包下载不完整，请稍后重试");
+        return file;
+    }
 
     /// <summary>
-    /// 启动 Velopack 更新程序：等本进程退出后替换文件并重启（主页面开着的话新版本也打开主页面）。
-    /// 调用方随后要正常退出（还原任务栏），更新程序最多等 60 秒。
+    /// 以更新模式运行下载好的安装包：等本进程退出后替换文件，并重新启动（主页面开着的话新版本也打开主页面）。
+    /// 调用方随后要正常退出（还原任务栏）。
     /// </summary>
-    public static void ApplyAndRestart(AppUpdate u, bool showMain)
+    public static void ApplyAndRestart(string setupFile, bool showMain)
     {
-        var args = new List<string>();
-        if (!showMain) args.Insert(0, AutoStart.BackgroundArg);
-        // silent: false：替换文件时显示和安装时同样的启动画面 + 进度条
-        Mgr.WaitExitThenApplyUpdates(u.Info.TargetFullRelease, silent: false, restart: true, args.ToArray());
+        // 启动前锁住文件（只允许读），防止下载完到运行之间被别的程序替换
+        using var guard = new FileStream(setupFile, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var args = $"--update --dir \"{AppDir}\" --wait-pid {Environment.ProcessId}";
+        if (!showMain) args += " " + AutoStart.BackgroundArg;
+        Process.Start(new ProcessStartInfo(setupFile, args) { UseShellExecute = false });
     }
 }

@@ -1,7 +1,6 @@
-# 推送 vX.Y.Z 标签时编译，用 Velopack 打包，并创建草稿 Release：
-#   DeviceBatteryTray-win-Setup.exe     安装版（会自动安装 .NET 8 桌面运行时）
-#   DeviceBatteryTray-win-Portable.zip  便携版
-#   *.nupkg / releases.win.json          自动更新用（完整包 + 相对上一版本的增量包）
+# 推送 vX.Y.Z 标签时编译、打包（build/package.ps1），并创建草稿 Release：
+#   DeviceBatteryTray-Setup.exe     安装包（安装 / 卸载 / 自动更新）
+#   DeviceBatteryTray-Portable.zip  便携版
 #
 #   git tag v0.2.0
 #   git push origin v0.2.0
@@ -20,17 +19,12 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
-    env:
-      REPO_URL: ${{ github.server_url }}/${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-
-      - name: 安装 vpk（版本见 .config/dotnet-tools.json）
-        run: dotnet tool restore
 
       - name: 版本号
         id: ver
@@ -40,23 +34,15 @@ jobs:
           if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "标签格式应为 vX.Y.Z：$env:GITHUB_REF_NAME" }
           "version=$v" >> $env:GITHUB_OUTPUT
 
-      - name: 编译
-        run: >
-          dotnet publish src/DeviceBatteryTray -c Release -r win-x64 --self-contained false
-          -p:Version=${{ steps.ver.outputs.version }} -o publish
-
-      - name: 下载上一个已发布版本（用于生成增量包，第一次发布时没有）
-        continue-on-error: true
-        run: dotnet vpk download github --repoUrl ${{ env.REPO_URL }} --token ${{ github.token }} -o Releases
-
       - name: 打包
-        run: >
-          dotnet vpk pack -u DeviceBatteryTray -v ${{ steps.ver.outputs.version }} -p publish -o Releases
-          -e DeviceBatteryTray.exe --packTitle "设备电量" --packAuthors AnLifeX
-          -i src/DeviceBatteryTray/app.ico -f net8-x64-desktop
-          --splashImage src/DeviceBatteryTray/splash.png --splashProgressColor "#2DD4BF"
+        shell: pwsh
+        run: ./build/package.ps1 -Version ${{ steps.ver.outputs.version }}
 
       - name: 创建草稿 Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: >
-          dotnet vpk upload github --repoUrl ${{ env.REPO_URL }} --token ${{ github.token }} -o Releases
-          --tag ${{ github.ref_name }} --releaseName "设备电量 ${{ github.ref_name }}"
+          gh release create $env:GITHUB_REF_NAME
+          Releases/DeviceBatteryTray-Setup.exe Releases/DeviceBatteryTray-Portable.zip
+          --draft --title "设备电量 $env:GITHUB_REF_NAME" --generate-notes

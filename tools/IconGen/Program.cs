@@ -1,8 +1,7 @@
-// IconGen：生成程序图标 app.ico 和安装启动画面。
+// IconGen：生成程序图标 app.ico。
 // 用法:
 //   IconGen <输出.ico> [预览.png] [--design 名称]     生成图标（默认 ring）
 //   IconGen --candidates <预览.png>                    把所有候选方案画在一张图上对比
-//   IconGen --splash <输出.png> [--design 名称]        生成 Velopack 安装启动画面
 // 每个尺寸单独绘制并对齐像素，小尺寸（16/20/24）不会糊。
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -29,8 +28,7 @@ static class Program
         if (!Designs.ContainsKey(design)) { Console.WriteLine("未知方案: " + design); return 1; }
 
         if (args.Length == 2 && args[0] == "--candidates") { WriteCandidates(args[1]); return 0; }
-        if (args.Length == 2 && args[0] == "--splash") { WriteSplash(args[1], design); return 0; }
-        if (args.Length < 1) { Console.WriteLine("IconGen <out.ico> [preview.png] [--design ring|bars|bolt|classic] | --candidates <png> | --splash <png>"); return 1; }
+        if (args.Length < 1) { Console.WriteLine("IconGen <out.ico> [preview.png] [--design ring|bars|bolt|classic] | --candidates <png>"); return 1; }
 
         var images = Sizes.Select(n => Render(design, n)).ToList();
         WriteIco(args[0], images);
@@ -271,29 +269,6 @@ static class Program
             row++;
         }
         sheet.Save(file, ImageFormat.Png);
-        Console.WriteLine("写出 " + file);
-    }
-
-    /// <summary>Velopack 安装 / 更新启动画面：深色圆角卡片 + 图标 + 名称（进度条由安装器画在底部）。</summary>
-    static void WriteSplash(string file, string design)
-    {
-        int w = 480, h = 300;
-        using var bmp = new Bitmap(w, h, PixelFormat.Format32bppArgb);
-        using var g = Graphics.FromImage(bmp);
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-        g.Clear(Color.Transparent);
-        using (var path = Round(new RectangleF(0, 0, w, h), 16))
-        using (var lg = new LinearGradientBrush(new Rectangle(0, 0, w, h), Color.FromArgb(0x24, 0x2B, 0x3A), Color.FromArgb(0x16, 0x1B, 0x26), 90f))
-            g.FillPath(lg, path);
-        using (var icon = Render(design, 256)) g.DrawImage(icon, (w - 112) / 2, 52, 112, 112);
-        using var title = new Font("Microsoft YaHei UI", 26, FontStyle.Bold, GraphicsUnit.Pixel);
-        using var sub = new Font("Microsoft YaHei UI", 14, GraphicsUnit.Pixel);
-        var center = new StringFormat { Alignment = StringAlignment.Center };
-        g.DrawString("设备电量", title, Brushes.White, new RectangleF(0, 184, w, 40), center);
-        using var gray = new SolidBrush(Color.FromArgb(0x9C, 0xA3, 0xAF));
-        g.DrawString("在任务栏上查看无线外设电量", sub, gray, new RectangleF(0, 228, w, 24), center);
-        bmp.Save(file, ImageFormat.Png);
         Console.WriteLine("写出 " + file);
     }
 }

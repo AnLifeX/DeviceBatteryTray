@@ -220,7 +220,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
 
         Views.WpfHost.EnsureApp();
         _flyout = new Views.FlyoutWindow(this);
-        _flyout.Closed += (_, _) => { _flyout = null; _flyoutClosedAt = DateTime.Now; };
+        _flyout.Closed += (_, _) => { _flyout = null; _flyoutClosedAt = DateTime.Now; TrimMemorySoon(); };
         _flyout.ShowNear(Cursor.Position);
     }
 
@@ -230,7 +230,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         {
             Views.WpfHost.EnsureApp();
             _main = new Views.MainWindow(this, page);
-            _main.Closed += (_, _) => _main = null;
+            _main.Closed += (_, _) => { _main = null; TrimMemorySoon(); };
             Views.WpfHost.Show(_main);
         }
         else
@@ -317,9 +317,9 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         SetUpdate(new UpdateState(UpdateStatus.Downloading, info));
         try
         {
-            await Updater.DownloadAsync(info, new Progress<int>(p => SetUpdate(new UpdateState(UpdateStatus.Downloading, info, p))));
-            Log.W($"已下载 v{info.Version}，退出后由更新程序替换并重启");
-            Updater.ApplyAndRestart(info, showMain: _main is { IsVisible: true });
+            var setup = await Updater.DownloadAsync(info, new Progress<int>(p => SetUpdate(new UpdateState(UpdateStatus.Downloading, info, p))));
+            Log.W($"已下载 v{info.Version}，退出后由安装包替换文件并重启");
+            Updater.ApplyAndRestart(setup, showMain: _main is { IsVisible: true });
             ExitThread();
         }
         catch (Exception e)
@@ -338,8 +338,8 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         get
         {
             var v = Version.TryParse(Updater.CurrentText, out var cur) ? cur : new Version(0, 1, 0);
-            // AppUpdate.Info 只在真实下载 / 替换时用到，演示流程不会走到那里
-            return new UpdateState(UpdateStatus.Available, new AppUpdate(new Version(v.Major, v.Minor + 1, 0), null!));
+            // 演示流程不会真的下载，下载地址留空
+            return new UpdateState(UpdateStatus.Available, new AppUpdate(new Version(v.Major, v.Minor + 1, 0), "", 0));
         }
     }
 
@@ -400,8 +400,9 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         _updateTimer.Dispose();
         AppSettings.Changed -= OnSettingsChanged;
         SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
-        _flyout?.Close();
-        _main?.Close();
+        // 关窗口要用到 WPF；万一加载失败（比如程序文件被删了），也不能卡住退出，否则任务栏还原不了
+        try { CloseWindows(); } catch (Exception e) { Log.W("退出时关闭窗口失败: " + e.Message); }
+        _trimTimer?.Dispose();
         _widget.Detach();
         _widget.Dispose();
         _app.Visible = false; _app.Dispose();
@@ -409,5 +410,39 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         base.ExitThreadCore();
     }
 
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private void CloseWindows()
+    {
+        _flyout?.Close();
+        _main?.Close();
+    }
+
+    // ---------- 内存 ----------
+
+    private System.Windows.Forms.Timer? _trimTimer;
+
+    /// <summary>
+    /// 主页面和弹出面板都关闭 10 秒后：完整回收一次，并把暂时不用的内存还给系统。
+    /// WPF 加载后会常驻（打开过窗口后任务管理器里能到 100 多 MB），平时后台只需要十几 MB；
+    /// 还回去的页面再次打开窗口时按需换回。
+    /// </summary>
+    private void TrimMemorySoon()
+    {
+        if (_trimTimer == null) { _trimTimer = new System.Windows.Forms.Timer { Interval = 10_000 }; _trimTimer.Tick += OnTrim; }
+        _trimTimer.Stop();
+        _trimTimer.Start(); // 连续开关窗口时重新计时
+    }
+
+    private void OnTrim(object? s, EventArgs e)
+    {
+        _trimTimer!.Stop();
+        if (_main != null || _flyout != null) return;
+        System.Runtime.GCSettings.LargeObjectHeapCompactionMode = System.Runtime.GCLargeObjectHeapCompactionMode.CompactOnce;
+        GC.Collect(2, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+        GC.WaitForPendingFinalizers();
+        SetProcessWorkingSetSize(System.Diagnostics.Process.GetCurrentProcess().Handle, -1, -1);
+    }
+
+    [DllImport("kernel32.dll")] static extern bool SetProcessWorkingSetSize(IntPtr process, nint min, nint max);
     [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
 }
