@@ -34,7 +34,7 @@ public static class Program
         if (args.Length == 2 && args[0] == "--dump") { Dump(args[1]); return; }
 
 #if DEBUG
-        // 开发用：--demo-ui [home|settings|flyout|strip] [light|dark] [out.png] [--clean] 用演示数据打开主页面（不读设备、不挂任务栏）
+        // 开发用：--demo-ui [home|settings|about|empty|flyout|strip] [light|dark|system] [out.png] [--clean]（system：使用设置里的主题） 用演示数据打开主页面（不读设备、不挂任务栏）
         // --clean：README 截图用，不显示演示 / 更新横幅和演示专用设备，图片背景透明、主页面带圆角
         if (args.Length >= 1 && args[0] == "--demo-ui")
         {
@@ -42,7 +42,7 @@ public static class Program
             var a = args.Where(x => x != "--clean").ToArray();
             ApplicationConfiguration.Initialize();
             if (a.Length > 1 && a[1] == "strip" && a.Length > 3) { SaveStripPreview(a[3]); return; }
-            if (a.Length > 2) AppSettings.Current.Theme = a[2] == "dark" ? ThemeMode.Dark : ThemeMode.Light;
+            if (a.Length > 2 && a[2] is "light" or "dark") AppSettings.Current.Theme = a[2] == "dark" ? ThemeMode.Dark : ThemeMode.Light;
             Views.WpfHost.EnsureApp();
             System.Windows.Window w;
             if (a.Length > 1 && a[1] == "flyout")
@@ -54,9 +54,10 @@ public static class Program
             }
             else
             {
-                w = new Views.MainWindow(new DemoModel(clean), a.Length > 1 && a[1] == "settings" ? MainPage.Settings : MainPage.Home);
-                if (a.Length > 1 && a[1] == "about") Views.MainWindow.ViewModel!.AboutOpen = true;
+                w = new Views.MainWindow(new DemoModel(clean, empty: a.Length > 1 && a[1] == "empty"),
+                    a.Length > 1 && a[1] == "settings" ? MainPage.Settings : MainPage.Home);
                 if (clean) w.Height = 470; // 截图只有 4 台设备，去掉下面的空白
+                if (a.Length > 1 && a[1] == "about") Views.MainWindow.ViewModel!.AboutOpen = true;
                 Views.WpfHost.Show(w);
             }
             w.Closed += (_, _) => Application.Exit();
@@ -242,19 +243,25 @@ public static class Program
         bmp.Save(file);
     }
 
-    /// <summary>--demo-ui 用的演示数据；clean 为 README 截图用（见 --clean）。</summary>
-    sealed class DemoModel(bool clean = false) : IAppModel
+    /// <summary>
+    /// --demo-ui 用的模型。演示模式开着时显示模拟设备；关掉后和真实状态一样，没有任何模拟数据（显示为没有检测到设备）。
+    /// empty：启动时就关着演示模式。clean：README 截图用，只显示 4 台设备，不显示演示 / 更新横幅（见 --clean）。
+    /// </summary>
+    sealed class DemoModel(bool clean = false, bool empty = false) : IAppModel
     {
-        public IReadOnlyList<DeviceStatus> Devices => clean ? ReadmeDevices() : DeviceList.Build(DemoData.Raw)
+        bool _demo = !empty;
+        readonly DateTime _startedAt = DateTime.Now;
+        public IReadOnlyList<DeviceStatus> Devices => !_demo ? Array.Empty<DeviceStatus>() : clean ? ReadmeDevices() : DeviceList.Build(DemoData.Raw)
             .Append(new DeviceStatus("demo-admin", DeviceKind.Gamepad, "飞智 黑武士 3 Pro（普通权限时）",
                 new BatteryReading(ReadState.Error, Detail: FlydigiVader.NeedAdminDetail))).ToList();
-        public DateTime? UpdatedAt => new DateTime(2026, 11, 24, 14, 32, 5);
+        public DateTime? UpdatedAt => _demo ? new DateTime(2026, 11, 24, 14, 32, 5) : _startedAt;
         public bool Refreshing => false;
-        public UpdateState Update => clean ? UpdateState.Idle : new(UpdateStatus.Available, new AppUpdate(new Version(0, 2, 0), "", 0));
+        public UpdateState Update => _demo && !clean ? new(UpdateStatus.Available, new AppUpdate(new Version(0, 2, 0), "", 0)) : UpdateState.Idle;
         public bool AutoStart { get => true; set { } }
         public bool Elevated => true;
-        public bool Demo { get => !clean; set { } }
-        public event Action? Changed { add { } remove { } }
+        // clean（截图）不显示演示横幅
+        public bool Demo { get => _demo && !clean; set { if (_demo == value) return; _demo = value; Changed?.Invoke(); } }
+        public event Action? Changed;
         public void Refresh() { }
         public void CheckUpdate() { }
         public void InstallUpdate() { }

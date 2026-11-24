@@ -27,4 +27,8 @@
   <ItemGroup>
     <PackageReference Include="WPF-UI" Version="4.3.0" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- build/dev.ps1（dotnet watch）：XAML 改动也触发重新编译 -->
+    <Watch Include="**\*.xaml" Exclude="bin\**;obj\**" />
+  </ItemGroup>
 </Project>

@@ -8,12 +8,12 @@ using System.Windows.Media.Imaging;
 namespace DeviceBatteryTray.Setup;
 
 /// <summary>
-/// 开发用：--preview &lt;页面&gt; &lt;out.png&gt; 把安装程序的某个页面渲染成图片后退出，不执行任何安装操作。
+/// 开发用：--preview &lt;页面&gt; [out.png] 显示安装程序的某个页面，不执行任何安装操作；给出 png 路径时渲染成图片后退出。
 /// 页面：welcome location options progress error done confirm uninstall-done update update-error
 /// </summary>
 static class Preview
 {
-    public static int Run(Application app, string page, string file)
+    public static int Run(Application app, string page, string? file)
     {
         Window w;
         if (page.StartsWith("update"))
@@ -30,7 +30,7 @@ static class Preview
             wiz.ShowPreview(page);
             w = wiz;
         }
-        w.ContentRendered += async (_, _) =>
+        if (file != null) w.ContentRendered += async (_, _) =>
         {
             await Task.Delay(800);
             Save(w, file);

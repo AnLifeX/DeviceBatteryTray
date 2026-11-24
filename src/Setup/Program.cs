@@ -65,8 +65,8 @@ static class Program
 
         Window window;
 #if DEBUG
-        // 开发用：--preview <页面> <out.png> 把某个页面渲染成图片后退出（不执行任何安装操作）
-        if (args.Length >= 3 && args[0] == "--preview") return Preview.Run(app, args[1], args[2]);
+        // 开发用：--preview <页面> [out.png] 显示某个页面（不执行任何安装操作）；给出 png 路径时渲染成图片后退出
+        if (args.Length >= 2 && args[0] == "--preview") return Preview.Run(app, args[1], args.Length >= 3 ? args[2] : null);
 #endif
         if (update)
         {

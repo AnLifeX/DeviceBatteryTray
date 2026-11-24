@@ -39,6 +39,12 @@ public sealed class AppSettings
     static readonly string OldFilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DeviceBatteryTray", "settings.json");
     static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
+#if DEBUG
+    /// <summary>--demo-ui（开发用）只在内存里改设置，不写文件，不影响正在使用的设置。</summary>
+    static readonly bool ReadOnly = Environment.GetCommandLineArgs().Contains("--demo-ui");
+#else
+    static readonly bool ReadOnly = false;
+#endif
 
     public static AppSettings Current { get; private set; } = Load();
 
@@ -55,6 +61,7 @@ public sealed class AppSettings
 
     static void Save()
     {
+        if (ReadOnly) return;
         try
         {
             Directory.CreateDirectory(AppPaths.DataDir);
@@ -88,6 +95,7 @@ public sealed class AppSettings
 
     static void WriteFile(AppSettings s)
     {
+        if (ReadOnly) return;
         try
         {
             Directory.CreateDirectory(AppPaths.DataDir);
@@ -98,6 +106,7 @@ public sealed class AppSettings
 
     static void DeleteOld()
     {
+        if (ReadOnly) return;
         try
         {
             File.Delete(OldFilePath); // 只删文件：那个目录可能是安装目录
