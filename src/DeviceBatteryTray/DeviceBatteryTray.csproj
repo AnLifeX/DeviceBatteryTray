@@ -11,7 +11,7 @@
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ApplicationIcon>app.ico</ApplicationIcon>
     <!-- 发布版本号由 CI 从 git tag（vX.Y.Z）传入 -p:Version=X.Y.Z；本地编译用这里的前缀 -->
-    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionPrefix>0.1.1</VersionPrefix>
     <Product>设备电量</Product>
     <!-- 文件说明：Win10 的通知来源、任务管理器里显示的就是它（默认是程序集名 DeviceBatteryTray） -->
     <AssemblyTitle>设备电量</AssemblyTitle>
