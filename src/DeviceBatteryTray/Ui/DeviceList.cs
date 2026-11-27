@@ -55,12 +55,13 @@ public static class DeviceList
         var list = new List<DeviceStatus>();
         foreach (var group in raw.GroupBy(r => r.ModelId))
         {
-            int n = 0;
+            var count = new Dictionary<string, int>(); // 按名称编号：通用蓝牙同一型号下每台设备名称不同
             foreach (var r in group)
             {
                 string id = IdOf(r.ModelId, r.Key);
                 bool instance = r.Reading is { State: not ReadState.NotFound };
-                string auto = instance && ++n > 1 ? $"{r.Model} {n}" : r.Model;
+                int n = instance ? (count[r.Model] = count.GetValueOrDefault(r.Model) + 1) : 0;
+                string auto = n > 1 ? $"{r.Model} {n}" : r.Model;
                 string name = s.DeviceNames.TryGetValue(id, out var custom) && !string.IsNullOrWhiteSpace(custom) ? custom : auto;
                 list.Add(new DeviceStatus(id, r.Kind, name, r.Reading, r.Model, !s.HiddenDevices.Contains(id)));
             }

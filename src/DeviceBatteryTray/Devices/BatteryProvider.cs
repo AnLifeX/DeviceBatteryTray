@@ -2,7 +2,7 @@ using DeviceBatteryTray.Hid;
 
 namespace DeviceBatteryTray.Devices;
 
-public enum DeviceKind { Keyboard, Mouse, Gamepad, Headset }
+public enum DeviceKind { Keyboard, Mouse, Gamepad, Headset, Speaker, Other }
 
 public enum ReadState
 {
@@ -19,8 +19,15 @@ public sealed record BatteryReading(ReadState State, int Percent = 0, bool Charg
     public static BatteryReading Fail(string why) => new(ReadState.Error, Detail: why);
 }
 
-/// <summary>同一型号下的一台设备：Key 区分同型号的多个接收器（只有一种接收器 / 没插时为空）。</summary>
-public sealed record DeviceReading(string Key, BatteryReading Reading);
+/// <summary>
+/// 同一型号下的一台设备：Key 区分同型号的多个接收器（只有一种接收器 / 没插时为空）。
+/// Name / Kind 不为空时代替型号的 DisplayName / Kind（通用蓝牙这种一个 provider 读多种设备的情况）。
+/// </summary>
+public sealed record DeviceReading(string Key, BatteryReading Reading)
+{
+    public string? Name { get; init; }
+    public DeviceKind? Kind { get; init; }
+}
 
 public abstract class BatteryProvider
 {

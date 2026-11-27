@@ -14,6 +14,7 @@ public static class Glyphs
     const char Mouse = '\uE962';
     const char Game = '\uE7FC';
     const char Headphone = '\uE7F6';
+    const char Speakers = '\uE7F5';
     const char Devices = '\uE772';
     const char BatteryUnknown = '\uE996';
     // MDL2 电池字形不是连续的：Battery0..9 = E850..E859，Battery10 = E83F；
@@ -28,6 +29,7 @@ public static class Glyphs
         DeviceKind.Mouse => Mouse,
         DeviceKind.Gamepad => Game,
         DeviceKind.Headset => Headphone,
+        DeviceKind.Speaker => Speakers,
         _ => Devices,
     }).ToString();
 

@@ -9,6 +9,7 @@ public static class Providers
         new ThunderobotMouse(),
         new GameSirDongle(),
         new FlydigiVader(),
+        new BluetoothBattery(), // 通用蓝牙：读系统缓存的电量，见 docs/protocols/bluetooth.md
         // 漫步者 HECATE G2（35BB:A209）协议未知，暂不加入，见 docs/protocols/edifier-hecate-g2.md
     };
 

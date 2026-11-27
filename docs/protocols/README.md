@@ -9,8 +9,15 @@
 | 雷神 ML903 mini 鼠标 | `369B:0114`（星闪接收器）、`369B:00F3`（有线） | 直接 HID | [thunderobot-ml903mini.md](thunderobot-ml903mini.md) |
 | 盖世小鸡手柄 | `3537:103E`（2.4G 接收器） | 直接 HID | [gamesir-dongle.md](gamesir-dongle.md) |
 | 飞智 黑武士 3 Pro | `045E:028E`（XInput） | 飞智过滤驱动，需管理员权限 | [flydigi-vader3pro.md](flydigi-vader3pro.md) |
+| 通用蓝牙设备 | —（已配对、已连接） | 读系统缓存的电量属性（SetupAPI，无需管理员） | [bluetooth.md](bluetooth.md) |
 
-调研中、暂不支持：漫步者 HECATE G2 无线版耳机（`35BB:A209`），已尝试的方法见 [edifier-hecate-g2.md](edifier-hecate-g2.md)。
+调研中、暂不支持：漫步者 HECATE G2 无线版耳机的 2.4G 接收器（`35BB:A209`），已尝试的方法见 [edifier-hecate-g2.md](edifier-hecate-g2.md)；蓝牙模式下可以按通用蓝牙设备读取。
+
+## 通用蓝牙设备
+- 属性：`{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2`（BYTE 电量），经典蓝牙写在 HFP 子节点、BLE 写在 `BTHLE\DEV_*` 节点
+- 是否连接：设备节点上的 `{83DA6326-97A6-4088-9453-A1923F573B29} 15`；断开后属性里仍留着旧电量
+- 类型：`DEVPKEY_DeviceContainer_Category`，兜底用 Class of Device
+- 来源：Windows 蓝牙栈（即「设置 → 蓝牙」显示的值）
 
 ## VGN 键盘
 - 接口：UsagePage `0xFF1C` / Usage `0x92`，Report ID `0x04`，64 字节

@@ -160,7 +160,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
                     catch (Exception e) { readings = new[] { new DeviceReading("", BatteryReading.Fail(e.Message)) }; Log.W($"{p.Id} 异常: {e}"); }
                     foreach (var r in readings)
                     {
-                        results.Add(new RawDevice(p.Id, r.Key, p.Kind, p.DisplayName, r.Reading));
+                        results.Add(new RawDevice(p.Id, r.Key, r.Kind ?? p.Kind, r.Name ?? p.DisplayName, r.Reading));
                         Log.W($"{DeviceList.IdOf(p.Id, r.Key)}: {r.Reading} ({sw.ElapsedMilliseconds}ms)");
                     }
                 }
