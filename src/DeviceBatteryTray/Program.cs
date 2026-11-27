@@ -114,6 +114,7 @@ public static class Program
         Log.W($"启动 v{Updater.CurrentText}，管理员={FlydigiVader.IsElevated()}，参数={string.Join(" ", args)}");
         Application.ThreadException += (_, e) => Log.W("UI 线程异常: " + e.Exception);
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Log.W("未处理异常: " + e.ExceptionObject);
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => AppSettings.Flush(); // 自动更新等直接结束进程时补写设置
 
         Application.Run(new TrayApp(CreateProviders(), showMain: !background, demo: DemoData.Available && args.Contains("--demo")));
     }

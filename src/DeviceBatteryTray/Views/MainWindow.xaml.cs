@@ -39,6 +39,7 @@ public partial class MainWindow : ChromeWindow
         };
         _m.Changed += OnModelChanged;
         AppSettings.Changed += OnSettingsChanged;
+        AppSettings.Saved += OnSettingsSaved;
         _tick.Tick += (_, _) => ViewModel?.Tick();
         _tick.Start();
         Loaded += (_, _) => Navigate(_page);
@@ -46,6 +47,7 @@ public partial class MainWindow : ChromeWindow
         {
             _m.Changed -= OnModelChanged;
             AppSettings.Changed -= OnSettingsChanged;
+            AppSettings.Saved -= OnSettingsSaved;
             _tick.Stop();
         };
     }
@@ -87,6 +89,9 @@ public partial class MainWindow : ChromeWindow
         WpfHost.ApplyTheme();
         ViewModel?.Sync();
     }
+
+    // 设置在线程池线程上写入文件，回到 UI 线程显示提示（窗口正在关闭时不再显示）
+    void OnSettingsSaved(bool ok) => Dispatcher.BeginInvoke(() => { if (IsLoaded) ViewModel?.ShowSaved(ok); });
 
     private bool _aboutShown;
 

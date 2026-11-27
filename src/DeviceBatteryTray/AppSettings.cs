@@ -32,7 +32,6 @@ public sealed class AppSettings
     /// <summary>出现过的设备 ID（判断「换了 USB 口的老设备」还是「本来就在的另一台」用）。</summary>
     public List<string> SeenDevices { get; set; } = new();
 
-    public static readonly int[] RefreshChoices = { 10, 30, 60, 120, 300 };
     public static readonly int[] LowBatteryChoices = { 0, 10, 15, 20, 30 };
     static readonly string FilePath = Path.Combine(AppPaths.DataDir, "settings.json");
     // 有一个开发版本把设置放在了 %LOCALAPPDATA%\DeviceBatteryTray（后来曾是测试版的安装目录），读不到新位置时从这里迁移
@@ -51,23 +50,56 @@ public sealed class AppSettings
     /// <summary>设置变化（在调用 <see cref="Change"/> 的线程上触发，一般是 UI 线程）。</summary>
     public static event Action? Changed;
 
+    /// <summary>设置已写入文件（在线程池线程上触发；ok = false 表示写入失败）。</summary>
+    public static event Action<bool>? Saved;
+
+    /// <summary>连续修改（如连点数字框的箭头）合并成一次写文件。</summary>
+    static readonly TimeSpan SaveDelay = TimeSpan.FromMilliseconds(500);
+    static readonly object SaveGate = new();
+    static System.Threading.Timer? _saveTimer;
+    static bool _dirty;
+
+    /// <summary>修改设置：内存里立即生效并触发 <see cref="Changed"/>，文件防抖写入（退出前用 <see cref="Flush"/> 补写）。</summary>
     public static void Change(Action<AppSettings> edit)
     {
         edit(Current);
         Current.Normalize();
-        Save();
+        lock (SaveGate)
+        {
+            _dirty = true;
+            _saveTimer ??= new System.Threading.Timer(_ => Flush());
+            _saveTimer.Change(SaveDelay, Timeout.InfiniteTimeSpan);
+        }
         Changed?.Invoke();
     }
 
-    static void Save()
+    /// <summary>把还没写入的修改立即写入文件。</summary>
+    public static void Flush()
     {
-        if (ReadOnly) return;
+        string json;
+        lock (SaveGate)
+        {
+            if (!_dirty) return;
+            _dirty = false;
+            _saveTimer?.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            json = JsonSerializer.Serialize(Current, Json);
+        }
+        bool ok = ReadOnly || WriteText(json);
+        Saved?.Invoke(ok);
+    }
+
+    static bool WriteText(string json)
+    {
         try
         {
             Directory.CreateDirectory(AppPaths.DataDir);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(Current, Json));
+            // 先写临时文件再替换：写到一半退出 / 断电不会留下损坏的设置文件（损坏会在下次启动时被默认值覆盖）
+            var tmp = FilePath + ".tmp";
+            File.WriteAllText(tmp, json);
+            File.Move(tmp, FilePath, overwrite: true);
+            return true;
         }
-        catch (Exception e) { Log.W("保存设置失败: " + e.Message); }
+        catch (Exception e) { Log.W("保存设置失败: " + e.Message); return false; }
     }
 
     static AppSettings Load()
@@ -82,6 +114,7 @@ public sealed class AppSettings
                     s.Normalize();
                     if (path == OldFilePath || initTheme) WriteFile(s);
                     if (path == OldFilePath) DeleteOld();
+                    Log.W($"读取设置（{path}）：刷新间隔 {s.RefreshSeconds} 秒");
                     return s;
                 }
             }
@@ -89,6 +122,7 @@ public sealed class AppSettings
         }
         var created = new AppSettings();
         created.Normalize();
+        Log.W("没有可用的设置文件，使用默认设置");
         WriteFile(created);
         return created;
     }
@@ -96,12 +130,7 @@ public sealed class AppSettings
     static void WriteFile(AppSettings s)
     {
         if (ReadOnly) return;
-        try
-        {
-            Directory.CreateDirectory(AppPaths.DataDir);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(s, Json));
-        }
-        catch (Exception e) { Log.W("保存设置失败: " + e.Message); }
+        WriteText(JsonSerializer.Serialize(s, Json));
     }
 
     static void DeleteOld()

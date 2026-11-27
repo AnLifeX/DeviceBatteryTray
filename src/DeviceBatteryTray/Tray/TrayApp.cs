@@ -395,6 +395,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
         SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
         // 关窗口要用到 WPF；万一加载失败（比如程序文件被删了），也不能卡住退出，否则任务栏还原不了
         try { CloseWindows(); } catch (Exception e) { Log.W("退出时关闭窗口失败: " + e.Message); }
+        AppSettings.Flush(); // 关窗口时数字框失去焦点也会提交一次，放在关窗口之后
         _trimTimer?.Dispose();
         _widget.Detach();
         _widget.Dispose();

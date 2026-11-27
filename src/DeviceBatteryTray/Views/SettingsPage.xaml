@@ -33,6 +33,26 @@
                 <ui:SymbolIcon Symbol="ArrowLeft24" FontSize="18" />
             </ui:Button>
             <ui:TextBlock FontTypography="Title" Text="设置" Margin="8,0,0,0" VerticalAlignment="Center" />
+            <!-- 设置写入文件后提示一下，2 秒后消失 -->
+            <StackPanel Orientation="Horizontal" Margin="16,4,0,0" VerticalAlignment="Center"
+                        Visibility="{Binding SaveHintShown, Converter={StaticResource BoolToVis}}">
+                <ui:SymbolIcon FontSize="14" VerticalAlignment="Center">
+                    <ui:SymbolIcon.Style>
+                        <Style TargetType="ui:SymbolIcon">
+                            <Setter Property="Symbol" Value="CheckmarkCircle16" />
+                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SaveFailed}" Value="True">
+                                    <Setter Property="Symbol" Value="ErrorCircle16" />
+                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ui:SymbolIcon.Style>
+                </ui:SymbolIcon>
+                <ui:TextBlock Text="{Binding SaveHint}" FontTypography="Caption" Margin="4,0,0,0" VerticalAlignment="Center"
+                              Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
         </StackPanel>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -51,11 +71,12 @@
                     <ui:CardControl.Header>
                         <StackPanel>
                             <ui:TextBlock Text="刷新间隔" />
-                            <ui:TextBlock FontTypography="Caption" Text="多久读取一次设备电量，5 ~ 3600 秒，输入后按回车生效" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <ui:TextBlock FontTypography="Caption" Text="多久读取一次设备电量，5 ~ 3600 秒，输入后按回车或点箭头生效" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
                     </ui:CardControl.Header>
                     <StackPanel Orientation="Horizontal">
-                        <ui:NumberBox Value="{Binding RefreshSeconds}" Minimum="5" Maximum="3600" SmallChange="5" LargeChange="60"
+                        <!-- PropertyChanged：点箭头立即生效（打字时 Value 只在回车 / 失去焦点时才变，不会逐字提交） -->
+                        <ui:NumberBox Value="{Binding RefreshSeconds, UpdateSourceTrigger=PropertyChanged}" Minimum="5" Maximum="3600" SmallChange="5" LargeChange="60"
                                       MaxDecimalPlaces="0" Width="150" SpinButtonPlacementMode="Inline" ClearButtonEnabled="False" />
                         <ui:TextBlock Text="秒" VerticalAlignment="Center" Margin="10,0,0,0" />
                     </StackPanel>

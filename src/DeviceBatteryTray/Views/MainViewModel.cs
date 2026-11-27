@@ -170,6 +170,36 @@ public sealed class MainViewModel : Observable
 
     public ObservableCollection<DeviceItem> Devices { get; } = new();
 
+    // ---------- 设置页的保存提示 ----------
+    private string _saveHint = "";
+    private bool _saveHintShown, _saveFailed;
+    private System.Windows.Threading.DispatcherTimer? _saveHintTimer;
+
+    /// <summary>设置页标题旁的提示：「已保存」/「保存失败」，2 秒后消失（失败的提示一直保留）。</summary>
+    public string SaveHint { get => _saveHint; private set => Set(ref _saveHint, value); }
+    public bool SaveHintShown { get => _saveHintShown; private set => Set(ref _saveHintShown, value); }
+    public bool SaveFailed { get => _saveFailed; private set => Set(ref _saveFailed, value); }
+
+    /// <summary>设置写入文件后调用（UI 线程）。</summary>
+    public void ShowSaved(bool ok)
+    {
+        SaveFailed = !ok;
+        SaveHint = ok ? "已保存" : "保存失败，详见日志";
+        SaveHintShown = true;
+        _saveHintTimer ??= new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _saveHintTimer.Tick -= HideSaveHint;
+        _saveHintTimer.Stop();
+        if (!ok) return;
+        _saveHintTimer.Tick += HideSaveHint;
+        _saveHintTimer.Start();
+    }
+
+    void HideSaveHint(object? sender, EventArgs e)
+    {
+        _saveHintTimer!.Stop();
+        SaveHintShown = false;
+    }
+
     /// <summary>弹出面板只显示在线（读到电量）的设备。</summary>
     public ObservableCollection<DeviceItem> OnlineDevices { get; } = new();
 
