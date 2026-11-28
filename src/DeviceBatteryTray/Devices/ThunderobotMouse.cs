@@ -23,13 +23,19 @@ public sealed class ThunderobotMouse : BatteryProvider
             return ReadEachReceiver(Vid, new[] { WiredPid }, UsagePage, ReadOne)
                 .Select(r => r with { Connection = ConnectionMode.Wired }).ToList();
 
-        // 接收器和数据线同时插着：接收器回包没有充电标志，改用有线读到的电量和充电状态。
+        // 接收器和数据线同时插着：有线模式下鼠标固件固定返回 0xBC（60%+充电），不是真实电量；
+        // 所以接收器还能读到电量时，保留接收器的真实百分比，只借用有线的充电标志和连接模式。
         // 只有一个接收器时才能确定是同一只鼠标；仍归在接收器名下，界面里不会多出一台设备
         if (rx.Count == 1 && Present(Vid, WiredPid))
         {
             var wired = ReadEachReceiver(Vid, new[] { WiredPid }, UsagePage, ReadOne);
             if (wired.Count == 1 && wired[0].Reading.State == ReadState.Ok)
-                return new[] { rx[0] with { Reading = wired[0].Reading, Connection = ConnectionMode.Wired } };
+            {
+                var merged = rx[0].Reading.State == ReadState.Ok
+                    ? rx[0].Reading with { Charging = wired[0].Reading.Charging || rx[0].Reading.Charging }
+                    : wired[0].Reading;
+                return new[] { rx[0] with { Reading = merged, Connection = ConnectionMode.Wired } };
+            }
         }
         return rx;
     }
