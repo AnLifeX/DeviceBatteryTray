@@ -17,7 +17,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <StartupObject>DeviceBatteryTray.Setup.Program</StartupObject>
     <!-- 打包时由 CI 从 git tag 传入 -p:Version=X.Y.Z，必须和程序文件的版本一致 -->
-    <VersionPrefix>0.1.1</VersionPrefix>
+    <VersionPrefix>0.1.2</VersionPrefix>
     <Product>设备电量</Product>
     <AssemblyTitle>设备电量 安装程序</AssemblyTitle>
     <Company>AnLifeX</Company>
