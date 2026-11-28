@@ -31,6 +31,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
     private DateTime _flyoutClosedAt;
     private Views.MainWindow? _main;
     private int _polling;
+    private readonly Dictionary<string, (BatteryReading Reading, ConnectionMode Connection)> _lastLogged = new();
     private bool? _autoStart;
     private Action? _balloonClick;
     private bool _notifying; // 有提醒正在显示：托盘图标要保持可见
@@ -152,6 +153,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
             try
             {
                 var results = new List<RawDevice>();
+                var activeIds = new HashSet<string>();
                 foreach (var p in _providers)
                 {
                     var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -176,9 +178,17 @@ public sealed class TrayApp : ApplicationContext, IAppModel
                     catch (Exception e) { readings = new[] { new DeviceReading("", BatteryReading.Fail("读取失败")) }; Log.W($"{p.Id} 异常: {e}"); }
                     foreach (var r in readings)
                     {
-                        results.Add(new RawDevice(p.Id, r.Key, r.Kind ?? p.Kind, r.Name ?? p.DisplayName, r.Reading, r.Connection ?? p.Connection));
-                        Log.W($"{DeviceList.IdOf(p.Id, r.Key)}: {r.Reading} ({sw.ElapsedMilliseconds}ms)");
+                        var conn = r.Connection ?? p.Connection;
+                        var id = DeviceList.IdOf(p.Id, r.Key);
+                        activeIds.Add(id);
+                        results.Add(new RawDevice(p.Id, r.Key, r.Kind ?? p.Kind, r.Name ?? p.DisplayName, r.Reading, conn));
+                        LogReadingIfNeeded(id, r.Reading, conn, sw.ElapsedMilliseconds);
                     }
+                }
+                foreach (var gone in _lastLogged.Keys.Where(k => !activeIds.Contains(k)).ToList())
+                {
+                    if (_lastLogged.Remove(gone, out var prev) && prev.Reading.State != ReadState.NotFound)
+                        Log.W($"{gone} [{prev.Connection}]: 已断开");
                 }
                 _ui.Post(_ =>
                 {
@@ -192,6 +202,17 @@ public sealed class TrayApp : ApplicationContext, IAppModel
             }
             finally { Interlocked.Exchange(ref _polling, 0); }
         });
+    }
+
+    /// <summary>仅在状态/电量/连接模式变化或读取耗时异常时写日志，避免重复刷屏冲掉有效记录。</summary>
+    private void LogReadingIfNeeded(string id, BatteryReading reading, ConnectionMode conn, long elapsedMs)
+    {
+        bool hadPrev = _lastLogged.TryGetValue(id, out var prev);
+        bool changed = hadPrev ? (prev.Reading != reading || prev.Connection != conn) : reading.State != ReadState.NotFound;
+        if (!changed && elapsedMs < 1000) return;
+
+        _lastLogged[id] = (reading, conn);
+        Log.W($"{id} [{conn}]: {reading} ({elapsedMs}ms)");
     }
 
     /// <summary>任务栏和面板只显示读到电量、且没被用户隐藏的设备。</summary>
