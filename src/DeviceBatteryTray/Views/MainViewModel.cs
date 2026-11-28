@@ -42,7 +42,8 @@ public sealed class DeviceItem : Observable
     private BatteryLevel _level;
 
     private string _name = "", _model = "", _editName = "";
-    private bool _visible = true, _editing;
+    private string _connectionIconData = "", _connectionTip = "";
+    private bool _visible = true, _editing, _hasConnection;
 
     public DeviceItem(string id, DeviceKind kind)
     {
@@ -97,12 +98,36 @@ public sealed class DeviceItem : Observable
     {
         Name = d.Name;
         Model = d.Model;
+        UpdateConnection(d.Connection);
         if (_visible != d.Visible) { _visible = d.Visible; Raise(nameof(Visible)); }
         Update(d.Reading!);
         // 用户改过名字的设备，在状态前面带上型号，方便知道是什么设备（自动编号的「型号 2」不用重复）
         if (d.Model.Length > 0 && !d.Name.StartsWith(d.Model)) Status = d.Model + " · " + Status;
     }
+
+    // 16x16 线条矢量图标：2.4G 射频波、星闪 NearLink 官方互锁双弧、蓝牙、有线插头
+    const string Icon24G = "M5.3,5.6 A3.4,3.4 0 0 0 5.3,10.4 M3.1,3.5 A6.4,6.4 0 0 0 3.1,12.5 M10.7,5.6 A3.4,3.4 0 0 1 10.7,10.4 M12.9,3.5 A6.4,6.4 0 0 1 12.9,12.5 M8,7.3 A0.7,0.7 0 1 0 8,8.7 A0.7,0.7 0 1 0 8,7.3";
+    const string IconNearLink = "M7.2,3.4 L5.5,1.8 C1.6,5.2 1.6,10.8 5.5,14.2 C7.8,12.2 10.2,9.8 10.2,8 C10.2,6.8 9.6,5.8 8.9,5.1 M8.8,12.6 L10.5,14.2 C14.4,10.8 14.4,5.2 10.5,1.8 C8.2,3.8 5.8,6.2 5.8,8 C5.8,9.2 6.4,10.2 7.1,10.9";
+    const string IconBluetooth = "M4.5,4.5 L11.5,11.5 L8,14.5 L8,1.5 L11.5,4.5 L4.5,11.5";
+    const string IconWired = "M8,12.2 A1.1,1.1 0 1 0 8,14.4 A1.1,1.1 0 1 0 8,12.2 M8,12.2 L8,2 M6.2,3.8 L8,2 L9.8,3.8 M8,10.5 L4.0,8.2 L4.0,6.7 M4.0,5.0 A0.85,0.85 0 1 0 4.0,6.7 A0.85,0.85 0 1 0 4.0,5.0 M8,9.0 L12.0,6.8 L12.0,5.6 M11.2,4.0 L12.8,4.0 L12.8,5.6 L11.2,5.6 Z";
+
+    void UpdateConnection(ConnectionMode mode)
+    {
+        (ConnectionIconData, ConnectionTip) = mode switch
+        {
+            ConnectionMode.Receiver24G => (Icon24G, "2.4G 接收器连接"),
+            ConnectionMode.NearLink => (IconNearLink, "星闪连接"),
+            ConnectionMode.Bluetooth => (IconBluetooth, "蓝牙连接"),
+            ConnectionMode.Wired => (IconWired, "有线直连"),
+            _ => ("", ""),
+        };
+        HasConnection = ConnectionIconData.Length > 0;
+    }
+
     public string Glyph { get; }
+    public string ConnectionIconData { get => _connectionIconData; private set => Set(ref _connectionIconData, value); }
+    public string ConnectionTip { get => _connectionTip; private set => Set(ref _connectionTip, value); }
+    public bool HasConnection { get => _hasConnection; private set => Set(ref _hasConnection, value); }
     public string Status { get => _status; private set => Set(ref _status, value); }
     public double Percent { get => _percent; private set => Set(ref _percent, value); }
     public string PercentText { get => _percentText; private set => Set(ref _percentText, value); }
@@ -318,7 +343,7 @@ public sealed class MainViewModel : Observable
 
     /// <summary>关于页用的大图标。</summary>
     public System.Windows.Media.ImageSource? AppIconImage => MainWindow.AppIconSource;
-    public string Description => "在任务栏上查看无线键盘、鼠标、手柄的电量，不需要安装各家驱动。";
+    public string Description => "在任务栏上查看无线外设和蓝牙设备的电量，无需打开各家驱动。";
 
     public bool AutoStart
     {
@@ -326,7 +351,7 @@ public sealed class MainViewModel : Observable
         set { _m.AutoStart = value; RaiseAll(); }
     }
 
-    public string AutoStartDescription => _m.Elevated ? "登录 Windows 后在后台启动（使用计划任务，不弹 UAC）" : "登录 Windows 后在后台启动";
+    public string AutoStartDescription => "登录 Windows 后在后台启动";
 
     /// <summary>刷新间隔（秒），可以直接输入，5 ~ 3600。</summary>
     public double? RefreshSeconds
@@ -348,8 +373,9 @@ public sealed class MainViewModel : Observable
         get => AppSettings.Current.ReadFlydigi;
         set { AppSettings.Change(s => s.ReadFlydigi = value); _m.Refresh(); }
     }
-    public string FlydigiDescription => !AppSettings.Current.ReadFlydigi ? "已关闭，程序不会请求管理员权限"
-        : _m.Elevated ? "需要管理员权限（当前已是管理员）" : "需要管理员权限，只在检测到黑武士接收器时才请求";
+    public string FlydigiDescription => AppSettings.Current.ReadFlydigi
+        ? "开启后可读取该手柄电量（需要管理员权限）"
+        : "已关闭，不再请求管理员权限";
 
 
     public bool AutoUpdate
@@ -357,7 +383,7 @@ public sealed class MainViewModel : Observable
         get => AppSettings.Current.AutoUpdate;
         set => AppSettings.Change(s => s.AutoUpdate = value);
     }
-    public string AutoUpdateDescription => AppSettings.Current.AutoUpdate ? "发现新版本时自动下载、替换程序并重启" : "已关闭，可以在下面手动检查更新";
+    public string AutoUpdateDescription => AppSettings.Current.AutoUpdate ? "发现新版本时自动下载并更新" : "已关闭，可手动检查更新";
 
     public string UpdateStatusText => _m.Update.Status switch
     {
@@ -365,8 +391,8 @@ public sealed class MainViewModel : Observable
         UpdateStatus.UpToDate => "已是最新版本",
         UpdateStatus.Available => $"发现新版本 v{_m.Update.Info?.Version}",
         UpdateStatus.Downloading => $"正在下载 v{_m.Update.Info?.Version}… {_m.Update.Progress}%",
-        UpdateStatus.Failed => "检查更新失败：" + _m.Update.Error,
-        _ => "还没有检查过更新",
+        UpdateStatus.Failed => _m.Update.Error ?? "检查更新失败，请稍后重试",
+        _ => "尚未检查更新",
     };
     public string UpdateActionText => _m.Update.Status switch
     {

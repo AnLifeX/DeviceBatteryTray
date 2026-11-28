@@ -9,6 +9,7 @@ public sealed class VgnKeyboard : BatteryProvider
     public override string Id => "vgn-320f-5088";
     public override string DisplayName => "VGN V98Pro V2 键盘";
     public override DeviceKind Kind => DeviceKind.Keyboard;
+    public override ConnectionMode Connection => ConnectionMode.Receiver24G;
 
     public override IReadOnlyList<DeviceReading> ReadAll() => ReadEachReceiver(Vid, new[] { Pid }, UsagePage, ReadOne);
 
@@ -24,7 +25,7 @@ public sealed class VgnKeyboard : BatteryProvider
         }
         if (rx == null) return BatteryReading.Offline;
         if (rx[3] == CmdOffline) return BatteryReading.Offline;
-        if (rx[3] != CmdPowerInfo) return BatteryReading.Fail($"未知应答 0x{rx[3]:X2}");
+        if (rx[3] != CmdPowerInfo) { Log.W($"VGN 键盘未知应答: 0x{rx[3]:X2}"); return BatteryReading.Fail("读取失败"); }
 
         // 带 Report ID 的缓冲：数据区从 [1] 开始，电量在数据区偏移 7 → [8]，充电标志 [9]
         return new BatteryReading(ReadState.Ok, Math.Min((int)rx[8], 100), rx[9] != 0);

@@ -16,6 +16,7 @@ public sealed class FlydigiVader : BatteryProvider
     public override string Id => "flydigi-vader3";
     public override string DisplayName => "飞智 黑武士 3 Pro";
     public override DeviceKind Kind => DeviceKind.Gamepad;
+    public override ConnectionMode Connection => ConnectionMode.Receiver24G;
 
     public static bool IsElevated()
     {
@@ -24,8 +25,8 @@ public sealed class FlydigiVader : BatteryProvider
     }
 
     public const string NeedAdminDetail = "需要管理员权限才能读取电量";
-    public const string NotReadyDetail = "飞智驱动未连上手柄";
-    public const string ServiceBusyDetail = "飞智空间站服务运行中，无法同时读取电量";
+    public const string NotReadyDetail = "未连接到手柄";
+    public const string ServiceBusyDetail = "飞智空间站运行中，暂无法读取";
 
     /// <summary>飞智后台服务（FDGMonitorService → GameControllerService.exe）是否在运行。</summary>
     static bool ServiceRunning()
@@ -121,7 +122,7 @@ public sealed class FlydigiVader : BatteryProvider
                 why = "";
                 if (_started) return true;
                 var dir = FindFlydigiServiceDir();
-                if (dir == null) { why = "未找到飞智驱动组件"; return false; }
+                if (dir == null) { why = "未检测到飞智空间站"; return false; }
                 try
                 {
                     SetDllDirectoryW(dir);

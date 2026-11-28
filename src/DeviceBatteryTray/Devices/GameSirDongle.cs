@@ -8,6 +8,7 @@ public sealed class GameSirDongle : BatteryProvider
     public override string Id => "gamesir-3537-103e";
     public override string DisplayName => "盖世小鸡手柄";
     public override DeviceKind Kind => DeviceKind.Gamepad;
+    public override ConnectionMode Connection => ConnectionMode.Receiver24G;
 
     public override IReadOnlyList<DeviceReading> ReadAll() => ReadEachReceiver(Vid, new[] { Pid }, UsagePage, ReadOne);
 

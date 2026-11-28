@@ -11,8 +11,9 @@ namespace DeviceBatteryTray.Devices;
 public sealed class BluetoothBattery : BatteryProvider
 {
     public override string Id => "bluetooth";
-    public override string DisplayName => "蓝牙设备（系统电量）";
+    public override string DisplayName => "蓝牙设备";
     public override DeviceKind Kind => DeviceKind.Other;
+    public override ConnectionMode Connection => ConnectionMode.Bluetooth;
 
     // {104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2：DEVPKEY_Bluetooth_Battery（BYTE，0-100）
     static readonly DevPropKey BatteryKey = new(new Guid("104EA319-6EE2-4701-BD47-8DDBF425BBE5"), 2);

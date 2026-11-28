@@ -254,7 +254,7 @@ public static class Program
         readonly DateTime _startedAt = DateTime.Now;
         public IReadOnlyList<DeviceStatus> Devices => !_demo ? Array.Empty<DeviceStatus>() : clean ? ReadmeDevices() : DeviceList.Build(DemoData.Raw)
             .Append(new DeviceStatus("demo-admin", DeviceKind.Gamepad, "飞智 黑武士 3 Pro（普通权限时）",
-                new BatteryReading(ReadState.Error, Detail: FlydigiVader.NeedAdminDetail))).ToList();
+                new BatteryReading(ReadState.Error, Detail: FlydigiVader.NeedAdminDetail), Connection: ConnectionMode.Receiver24G)).ToList();
         public DateTime? UpdatedAt => _demo ? new DateTime(2026, 11, 24, 14, 32, 5) : _startedAt;
         public bool Refreshing => false;
         public UpdateState Update => _demo && !clean ? new(UpdateStatus.Available, new AppUpdate(new Version(0, 2, 0), "", 0)) : UpdateState.Idle;

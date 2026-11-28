@@ -24,18 +24,18 @@ public static class DemoData
 
     public static IReadOnlyList<RawDevice> Raw => new List<RawDevice>
     {
-        new("vgn-320f-5088", "demo-a", DeviceKind.Keyboard, Vgn, new(ReadState.Ok, _keyboard)),
-        new("vgn-320f-5088", "demo-b", DeviceKind.Keyboard, Vgn, new(ReadState.Ok, 52)),
-        new("vgn-320f-5088", "demo-c", DeviceKind.Keyboard, Vgn, new(ReadState.Ok, 33)),
-        new("thunderobot-369b", "demo-a", DeviceKind.Mouse, Thunder, new(ReadState.Ok, 18)),
-        new("thunderobot-369b", "demo-b", DeviceKind.Mouse, Thunder, new(ReadState.Ok, 88)),
-        new("thunderobot-369b", "demo-c", DeviceKind.Mouse, Thunder, new(ReadState.Ok, _mouse2, Charging: true)),
-        new("gamesir-3537-103e", "demo-a", DeviceKind.Gamepad, GameSir, new(ReadState.Ok, _gamepad, Charging: true)),
-        new("gamesir-3537-103e", "demo-b", DeviceKind.Gamepad, GameSir, new(ReadState.Ok, 64)),
-        new("gamesir-3537-103e", "demo-c", DeviceKind.Gamepad, GameSir, BatteryReading.Offline),
-        new("flydigi-vader3", "", DeviceKind.Gamepad, Flydigi, new(ReadState.Ok, 100, Detail: "估算")),
-        new("demo-headset", "", DeviceKind.Headset, "无线耳机（演示）", BatteryReading.Offline),
-        new("demo-error", "", DeviceKind.Mouse, "读取失败的鼠标（演示）", BatteryReading.Fail("无应答")),
+        new("vgn-320f-5088", "demo-a", DeviceKind.Keyboard, Vgn, new(ReadState.Ok, _keyboard), ConnectionMode.Receiver24G),
+        new("vgn-320f-5088", "demo-b", DeviceKind.Keyboard, Vgn, new(ReadState.Ok, 52), ConnectionMode.Receiver24G),
+        new("vgn-320f-5088", "demo-c", DeviceKind.Keyboard, Vgn, new(ReadState.Ok, 33), ConnectionMode.Receiver24G),
+        new("thunderobot-369b", "demo-a", DeviceKind.Mouse, Thunder, new(ReadState.Ok, 18), ConnectionMode.NearLink),
+        new("thunderobot-369b", "demo-b", DeviceKind.Mouse, Thunder, new(ReadState.Ok, 88), ConnectionMode.NearLink),
+        new("thunderobot-369b", "demo-c", DeviceKind.Mouse, Thunder, new(ReadState.Ok, _mouse2, Charging: true), ConnectionMode.Wired),
+        new("gamesir-3537-103e", "demo-a", DeviceKind.Gamepad, GameSir, new(ReadState.Ok, _gamepad, Charging: true), ConnectionMode.Receiver24G),
+        new("gamesir-3537-103e", "demo-b", DeviceKind.Gamepad, GameSir, new(ReadState.Ok, 64), ConnectionMode.Receiver24G),
+        new("gamesir-3537-103e", "demo-c", DeviceKind.Gamepad, GameSir, BatteryReading.Offline, ConnectionMode.Receiver24G),
+        new("flydigi-vader3", "", DeviceKind.Gamepad, Flydigi, new(ReadState.Ok, 100, Detail: "估算"), ConnectionMode.Receiver24G),
+        new("bluetooth", "demo-a", DeviceKind.Headset, "HECATE G2 Wireless", new(ReadState.Ok, 80), ConnectionMode.Bluetooth),
+        new("demo-error", "", DeviceKind.Mouse, "读取失败的鼠标（演示）", BatteryReading.Fail("读取失败"), ConnectionMode.Receiver24G),
     };
 
     /// <summary>模拟一次刷新：键盘掉 1%，两个充电中的设备往上充（充满后重来）。</summary>

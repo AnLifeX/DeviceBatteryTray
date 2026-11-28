@@ -4,6 +4,8 @@ namespace DeviceBatteryTray.Devices;
 
 public enum DeviceKind { Keyboard, Mouse, Gamepad, Headset, Speaker, Other }
 
+public enum ConnectionMode { Unknown, Receiver24G, NearLink, Bluetooth, Wired }
+
 public enum ReadState
 {
     Ok,          // 读到电量
@@ -21,12 +23,13 @@ public sealed record BatteryReading(ReadState State, int Percent = 0, bool Charg
 
 /// <summary>
 /// 同一型号下的一台设备：Key 区分同型号的多个接收器（只有一种接收器 / 没插时为空）。
-/// Name / Kind 不为空时代替型号的 DisplayName / Kind（通用蓝牙这种一个 provider 读多种设备的情况）。
+/// Name / Kind / Connection 不为空时代替型号的默认值（如通用蓝牙或支持双模的设备）。
 /// </summary>
 public sealed record DeviceReading(string Key, BatteryReading Reading)
 {
     public string? Name { get; init; }
     public DeviceKind? Kind { get; init; }
+    public ConnectionMode? Connection { get; init; }
 }
 
 public abstract class BatteryProvider
@@ -34,6 +37,7 @@ public abstract class BatteryProvider
     public abstract string Id { get; }
     public abstract string DisplayName { get; }
     public abstract DeviceKind Kind { get; }
+    public virtual ConnectionMode Connection => ConnectionMode.Unknown;
 
     /// <summary>读一台设备（只支持单个接收器的型号实现这个即可）。</summary>
     public virtual BatteryReading Read() => ReadAll().FirstOrDefault()?.Reading ?? BatteryReading.NotFound;
@@ -56,14 +60,14 @@ public abstract class BatteryProvider
             var targets = all.Where(i => i.UsagePage == usagePage && i.OutputLength > 0).ToList();
             if (targets.Count == 0)
             {
-                if (all.Count > 0) return new[] { new DeviceReading("", BatteryReading.Fail("打不开厂商接口")) };
+                if (all.Count > 0) return new[] { new DeviceReading("", BatteryReading.Fail("无法连接设备")) };
                 continue;
             }
             var list = new List<DeviceReading>();
             foreach (var t in targets)
             {
                 using var c = HidConnection.Open(t);
-                list.Add(new DeviceReading(t.InstanceKey, c == null ? BatteryReading.Fail("打不开厂商接口") : read(c)));
+                list.Add(new DeviceReading(t.InstanceKey, c == null ? BatteryReading.Fail("无法连接设备") : read(c)));
             }
             return list;
         }

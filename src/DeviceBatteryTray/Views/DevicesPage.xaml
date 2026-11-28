@@ -205,6 +205,21 @@
                                     </StackPanel>
                                 </ui:CardControl.Header>
                                 <StackPanel Orientation="Horizontal">
+                                    <!-- 连接模式图标勋章：统一对齐在固定一列 -->
+                                    <Border Width="26" Height="24" Margin="0,0,14,0" CornerRadius="6" BorderThickness="1" VerticalAlignment="Center"
+                                            Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                            Visibility="{Binding HasConnection, Converter={StaticResource BoolToVis}}"
+                                            ToolTip="{Binding ConnectionTip}">
+                                        <Canvas Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Canvas.LayoutTransform>
+                                                <ScaleTransform ScaleX="0.82" ScaleY="0.82" />
+                                            </Canvas.LayoutTransform>
+                                            <Path Data="{Binding ConnectionIconData}"
+                                                  Stroke="{DynamicResource TextFillColorSecondaryBrush}"
+                                                  StrokeThickness="1.45" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
+                                        </Canvas>
+                                    </Border>
                                     <Grid MinWidth="110">
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Visibility="{Binding Online, Converter={StaticResource BoolToVis}}">
                                             <local:BatteryGlyph Style="{StaticResource BatteryIcon}" Percent="{Binding Percent}" Charging="{Binding Charging}" Width="34" Height="17" />
@@ -228,7 +243,7 @@
 
                 <ui:TextBlock FontTypography="Caption" Margin="2,10,0,24" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"
                               Visibility="{Binding HasDevices, Converter={StaticResource BoolToVis}}"
-                              Text="右侧开关控制设备是否在任务栏和弹出面板中显示；点名称旁的铅笔可以重命名，用来区分同型号的多台设备。" />
+                              Text="开关可控制是否在任务栏显示，点击名称旁图标可重命名。" />
             </StackPanel>
 
             <!-- 空状态：卡片填满剩余空间，内容在卡片里居中 -->
@@ -240,7 +255,7 @@
                     <ui:SymbolIcon Symbol="PlugDisconnected24" FontSize="48" HorizontalAlignment="Center"
                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                     <ui:TextBlock FontTypography="Subtitle" Text="没有检测到设备" HorizontalAlignment="Center" Margin="0,16,0,6" />
-                    <ui:TextBlock Text="插入支持的接收器后会自动出现" HorizontalAlignment="Center"
+                    <ui:TextBlock Text="连接支持的无线外设或蓝牙设备后会自动显示" HorizontalAlignment="Center"
                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     <ui:TextBlock FontTypography="Caption" Text="{Binding SupportedText}" HorizontalAlignment="Center" TextWrapping="Wrap"
                                   TextAlignment="Center" Margin="0,20,0,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />

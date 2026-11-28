@@ -70,7 +70,7 @@ public sealed class TrayApp : ApplicationContext, IAppModel
     {
         _demo = demo;
         _providers = providers;
-        _raw = providers.Select(p => new RawDevice(p.Id, "", p.Kind, p.DisplayName, null)).ToList();
+        _raw = providers.Select(p => new RawDevice(p.Id, "", p.Kind, p.DisplayName, null, p.Connection)).ToList();
         _ui = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
         _app = new NotifyIcon { Text = "设备电量", Icon = AppIcon.Sized(SystemInformation.SmallIconSize.Width), Visible = false };
         _app.MouseUp += (_, _) => ToggleFlyout();
@@ -156,11 +156,27 @@ public sealed class TrayApp : ApplicationContext, IAppModel
                 {
                     var sw = System.Diagnostics.Stopwatch.StartNew();
                     IReadOnlyList<DeviceReading> readings;
-                    try { readings = p.ReadAll(); }
-                    catch (Exception e) { readings = new[] { new DeviceReading("", BatteryReading.Fail(e.Message)) }; Log.W($"{p.Id} 异常: {e}"); }
+                    try
+                    {
+                        var task = Task.Run(() => p.ReadAll());
+                        if (task.Wait(TimeSpan.FromSeconds(10)))
+                            readings = task.Result;
+                        else
+                        {
+                            Log.W($"{p.Id}: 读取超时（超过 10 秒），本轮跳过");
+                            readings = new[] { new DeviceReading("", BatteryReading.Fail("读取超时")) };
+                        }
+                    }
+                    catch (AggregateException ae)
+                    {
+                        var e = ae.InnerException ?? ae;
+                        readings = new[] { new DeviceReading("", BatteryReading.Fail("读取失败")) };
+                        Log.W($"{p.Id} 异常: {e}");
+                    }
+                    catch (Exception e) { readings = new[] { new DeviceReading("", BatteryReading.Fail("读取失败")) }; Log.W($"{p.Id} 异常: {e}"); }
                     foreach (var r in readings)
                     {
-                        results.Add(new RawDevice(p.Id, r.Key, r.Kind ?? p.Kind, r.Name ?? p.DisplayName, r.Reading));
+                        results.Add(new RawDevice(p.Id, r.Key, r.Kind ?? p.Kind, r.Name ?? p.DisplayName, r.Reading, r.Connection ?? p.Connection));
                         Log.W($"{DeviceList.IdOf(p.Id, r.Key)}: {r.Reading} ({sw.ElapsedMilliseconds}ms)");
                     }
                 }

@@ -6,7 +6,7 @@ namespace DeviceBatteryTray.Ui;
 /// 一个设备的当前状态；Reading 为 null 表示还没读过。Name 是显示名（用户改过就是用户的名字），
 /// Model 是型号名；Visible 为 false 表示用户在主页面关掉了显示。
 /// </summary>
-public sealed record DeviceStatus(string Id, DeviceKind Kind, string Name, BatteryReading? Reading, string Model = "", bool Visible = true)
+public sealed record DeviceStatus(string Id, DeviceKind Kind, string Name, BatteryReading? Reading, string Model = "", bool Visible = true, ConnectionMode Connection = ConnectionMode.Unknown)
 {
     public bool Online => Reading?.State == ReadState.Ok;
 

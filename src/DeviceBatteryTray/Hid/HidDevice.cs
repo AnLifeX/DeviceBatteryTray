@@ -75,6 +75,7 @@ public sealed class HidConnection : IDisposable
     {
         // 必须先挂上读请求再写：部分接收器（如 VGN）应答极快，先写后读会丢包
         using var cts = new CancellationTokenSource(timeoutMs);
+        using var cancelReg = cts.Token.Register(() => Native.CancelIoEx(_fs.SafeFileHandle, IntPtr.Zero));
         var reader = Task.Run(async () =>
         {
             try
@@ -88,17 +89,35 @@ public sealed class HidConnection : IDisposable
                 }
             }
             catch (OperationCanceledException) { return null; }
+            catch (IOException) { return null; }
+            catch (ObjectDisposedException) { return null; }
         });
 
         Thread.Sleep(20); // 让读请求先下到驱动
         var buf = new byte[Interface.OutputLength];
         Array.Copy(report, buf, Math.Min(report.Length, buf.Length));
-        _fs.Write(buf, 0, buf.Length);
+        try
+        {
+            // 必须使用异步写入并共享超时：同步 Write 在设备休眠或 USB 挂起时会无限期阻塞整个轮询线程
+            _fs.WriteAsync(buf, 0, buf.Length, cts.Token).GetAwaiter().GetResult();
+        }
+        catch (Exception e) when (e is OperationCanceledException or IOException or ObjectDisposedException)
+        {
+            cts.Cancel();
+            Native.CancelIoEx(_fs.SafeFileHandle, IntPtr.Zero);
+            reader.Wait(200);
+            return null;
+        }
         Debug?.Invoke($"TX[{buf.Length}] {BitConverter.ToString(buf, 0, 16)} via {Interface.Path}");
 
-        var result = reader.GetAwaiter().GetResult();
-        cts.Cancel();
-        return result;
+        try
+        {
+            return reader.GetAwaiter().GetResult();
+        }
+        finally
+        {
+            cts.Cancel();
+        }
     }
 
     public byte[]? GetFeature(byte reportId)
@@ -108,7 +127,11 @@ public sealed class HidConnection : IDisposable
         return Native.HidD_GetFeature(_fs.SafeFileHandle, b, b.Length) ? b : null;
     }
 
-    public void Dispose() => _fs.Dispose();
+    public void Dispose()
+    {
+        Native.CancelIoEx(_fs.SafeFileHandle, IntPtr.Zero);
+        _fs.Dispose();
+    }
 }
 
 internal static class Native
@@ -146,6 +169,9 @@ internal static class Native
 
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     static extern SafeFileHandle CreateFile(string name, uint access, uint share, IntPtr sa, uint disp, uint flags, IntPtr tmpl);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool CancelIoEx(SafeFileHandle hFile, IntPtr lpOverlapped);
 
     public static SafeFileHandle Open(string path, bool readWrite) =>
         CreateFile(path, readWrite ? 0xC0000000 : 0, 3, IntPtr.Zero, 3, readWrite ? 0x40000000u : 0, IntPtr.Zero);

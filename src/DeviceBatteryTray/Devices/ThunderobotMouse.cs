@@ -13,13 +13,15 @@ public sealed class ThunderobotMouse : BatteryProvider
     public override string Id => "thunderobot-369b";
     public override string DisplayName => "雷神 ML903 mini 鼠标";
     public override DeviceKind Kind => DeviceKind.Mouse;
+    public override ConnectionMode Connection => ConnectionMode.NearLink;
 
     // 星闪接收器优先：插着接收器时读所有接收器，否则读有线直连的鼠标
     public override IReadOnlyList<DeviceReading> ReadAll()
     {
         var rx = ReadEachReceiver(Vid, new[] { ReceiverPid }, UsagePage, ReadOne);
         if (rx.Count == 1 && rx[0].Reading.State == ReadState.NotFound)
-            return ReadEachReceiver(Vid, new[] { WiredPid }, UsagePage, ReadOne);
+            return ReadEachReceiver(Vid, new[] { WiredPid }, UsagePage, ReadOne)
+                .Select(r => r with { Connection = ConnectionMode.Wired }).ToList();
 
         // 接收器和数据线同时插着：接收器回包没有充电标志，改用有线读到的电量和充电状态。
         // 只有一个接收器时才能确定是同一只鼠标；仍归在接收器名下，界面里不会多出一台设备
@@ -27,7 +29,7 @@ public sealed class ThunderobotMouse : BatteryProvider
         {
             var wired = ReadEachReceiver(Vid, new[] { WiredPid }, UsagePage, ReadOne);
             if (wired.Count == 1 && wired[0].Reading.State == ReadState.Ok)
-                return new[] { rx[0] with { Reading = wired[0].Reading } };
+                return new[] { rx[0] with { Reading = wired[0].Reading, Connection = ConnectionMode.Wired } };
         }
         return rx;
     }
@@ -35,7 +37,7 @@ public sealed class ThunderobotMouse : BatteryProvider
     static BatteryReading ReadOne(Hid.HidConnection c)
     {
         var rx = c.Request(new byte[] { OutId, CmdStatus }, b => b[0] == InId && b[1] == CmdStatus);
-        if (rx == null) return BatteryReading.Fail("无应答");
+        if (rx == null) return BatteryReading.Fail("读取失败");
         if (rx[2] == 0) return BatteryReading.Offline; // 鼠标休眠：整包为 0
 
         // 在 TLV 区里找电量 tag 0x25，下一字节：低 7 位百分比，最高位充电（只有有线直连时会置位）
@@ -47,7 +49,8 @@ public sealed class ThunderobotMouse : BatteryProvider
                 if (c.Interface.Pid == ReceiverPid) charging |= Trend(c.Interface.InstanceKey).Update(DateTime.Now, percent);
                 return new BatteryReading(ReadState.Ok, percent, charging);
             }
-        return BatteryReading.Fail("应答里没有电量字段");
+        Log.W("雷神鼠标应答里没有电量字段");
+        return BatteryReading.Fail("读取失败");
     }
 
     static ChargeTrend Trend(string key)

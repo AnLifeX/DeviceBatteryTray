@@ -3,7 +3,7 @@ using DeviceBatteryTray.Devices;
 namespace DeviceBatteryTray.Ui;
 
 /// <summary>一个型号读到的一台设备（还没套用名称 / 显示设置）。</summary>
-public sealed record RawDevice(string ModelId, string Key, DeviceKind Kind, string Model, BatteryReading? Reading);
+public sealed record RawDevice(string ModelId, string Key, DeviceKind Kind, string Model, BatteryReading? Reading, ConnectionMode Connection = ConnectionMode.Unknown);
 
 /// <summary>
 /// 把读到的设备整理成界面用的列表：
@@ -63,7 +63,7 @@ public static class DeviceList
                 int n = instance ? (count[r.Model] = count.GetValueOrDefault(r.Model) + 1) : 0;
                 string auto = n > 1 ? $"{r.Model} {n}" : r.Model;
                 string name = s.DeviceNames.TryGetValue(id, out var custom) && !string.IsNullOrWhiteSpace(custom) ? custom : auto;
-                list.Add(new DeviceStatus(id, r.Kind, name, r.Reading, r.Model, !s.HiddenDevices.Contains(id)));
+                list.Add(new DeviceStatus(id, r.Kind, name, r.Reading, r.Model, !s.HiddenDevices.Contains(id), r.Connection));
             }
         }
         return list;

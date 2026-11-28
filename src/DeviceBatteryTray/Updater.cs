@@ -59,24 +59,25 @@ public static class Updater
     /// <summary>有新版本返回信息，已是最新返回 null；失败抛异常（消息可直接展示）。</summary>
     public static async Task<AppUpdate?> CheckAsync()
     {
-        if (!CanSelfUpdate) throw new Exception("当前是开发版本，不支持自动更新（请使用安装版或便携版）");
+        if (!CanSelfUpdate) throw new Exception("当前版本不支持自动更新");
         using var req = new HttpRequestMessage(HttpMethod.Get, $"https://api.github.com/repos/{Repo}/releases/latest");
         req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         HttpResponseMessage resp;
         try { resp = await Http.SendAsync(req); }
-        catch (HttpRequestException e) { throw new Exception("无法连接到 GitHub：" + e.Message, e); }
-        catch (TaskCanceledException e) { throw new Exception("连接 GitHub 超时", e); }
+        catch (HttpRequestException e) { Log.W("检查更新网络错误: " + e.Message); throw new Exception("无法检查更新，请检查网络后重试", e); }
+        catch (TaskCanceledException e) { Log.W("检查更新超时"); throw new Exception("检查更新超时，请稍后重试", e); }
         using (resp)
         {
             if (resp.StatusCode == System.Net.HttpStatusCode.NotFound) return null; // 还没有发布过任何版本
-            if (!resp.IsSuccessStatusCode) throw new Exception($"GitHub 返回错误 {(int)resp.StatusCode}");
+            if (!resp.IsSuccessStatusCode) { Log.W($"检查更新返回 HTTP {(int)resp.StatusCode}"); throw new Exception("检查更新失败，请稍后重试"); }
             using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
             var latest = ToVersion(doc.RootElement.GetProperty("tag_name").GetString() ?? "");
             if (latest <= ToVersion(CurrentText)) return null;
             foreach (var a in doc.RootElement.GetProperty("assets").EnumerateArray())
                 if (a.GetProperty("name").GetString() == SetupAsset)
                     return new AppUpdate(latest, a.GetProperty("browser_download_url").GetString()!, a.GetProperty("size").GetInt64());
-            throw new Exception($"v{latest} 的发布里没有安装包");
+            Log.W($"v{latest} 的发布里没有安装包");
+            throw new Exception("新版本暂不可用，请稍后重试");
         }
     }
 
